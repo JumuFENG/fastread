@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}书架 - FastRead{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>我的书架</h2>
+            <div class="input-group" style="width: 300px;">
+                <input type="text" class="form-control" id="localSearch" placeholder="搜索本地书籍">
+                <button class="btn btn-outline-secondary" onclick="searchLocalBooks()">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="bookshelf" class="row">
+            <!-- 书籍列表将通过JavaScript动态加载 -->
+        </div>
+
+        <div id="loading" class="text-center d-none">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">加载中...</span>
+            </div>
+        </div>
+
+        <div id="emptyShelf" class="text-center mt-5 d-none">
+            <i class="bi bi-book display-1 text-muted"></i>
+            <h4 class="text-muted mt-3">书架空空如也</h4>
+            <p class="text-muted">点击上方搜索按钮添加书籍到书架</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        loadBooks();
+        loadBookSources();
+        // 为搜索框添加回车响应
+        document.getElementById('localSearch').addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                searchLocalBooks();
+            }
+        });
+    });
+
+    async function loadBooks() {
+        const loading = document.getElementById('loading');
+        const bookshelf = document.getElementById('bookshelf');
+        const emptyShelf = document.getElementById('emptyShelf');
+
+        loading.classList.remove('d-none');
+
+        try {
+            const response = await fetch('/api/books/');
+            const books = await response.json();
+
+            loading.classList.add('d-none');
+
+            if (books.length === 0) {
+                emptyShelf.classList.remove('d-none');
+                return;
+            }
+
+            bookshelf.innerHTML = books.map(book => `
+            <div class="col-md-3 col-sm-6 mb-4">
+                <div class="card book-card h-100">
+                    <img src="${book.cover_url || '/static/images/default-cover.jpg'}" 
+                         class="card-img-top book-cover" alt="${book.title}">
+                    <div class="card-body d-flex flex-column">
+                        <h6 class="card-title">${book.title}</h6>
+                        <p class="card-text text-muted small">${book.author}</p>
+                        <p class="card-text small flex-grow-1">${book.description.substring(0, 100)}...</p>
+                        <div class="mt-auto">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">${book.total_chapters}章</small>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-primary" onclick="readBook(${book.id})">
+                                        <i class="bi bi-book-open"></i> 阅读
+                                    </button>
+                                    <button class="btn btn-outline-danger" onclick="deleteBook(${book.id})">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        } catch (error) {
+            loading.classList.add('d-none');
+            console.error('加载书籍失败:', error);
+            showAlert('加载书籍失败', 'danger');
+        }
+    }
+
+    function readBook(bookId) {
+        window.location.href = `/book/${bookId}`;
+    }
+
+    async function deleteBook(bookId) {
+        if (!confirm('确定要删除这本书吗？')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/books/${bookId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                showAlert('书籍删除成功', 'success');
+                loadBooks();
+            } else {
+                showAlert('删除失败', 'danger');
+            }
+        } catch (error) {
+            console.error('删除书籍失败:', error);
+            showAlert('删除失败', 'danger');
+        }
+    }
+
+    function searchLocalBooks() {
+        const keyword = document.getElementById('localSearch').value.trim();
+        if (!keyword) {
+            loadBooks();
+            return;
+        }
+
+        fetch(`/api/books/?search=${encodeURIComponent(keyword)}`)
+            .then(response => response.json())
+            .then(books => {
+                const bookshelf = document.getElementById('bookshelf');
+                bookshelf.innerHTML = books.map(book => `
+                <div class="col-md-3 col-sm-6 mb-4">
+                    <div class="card book-card h-100">
+                        <img src="${book.cover_url || '/static/images/default-cover.jpg'}" 
+                             class="card-img-top book-cover" alt="${book.title}">
+                        <div class="card-body d-flex flex-column">
+                            <h6 class="card-title">${book.title}</h6>
+                            <p class="card-text text-muted small">${book.author}</p>
+                            <p class="card-text small flex-grow-1">${book.description.substring(0, 100)}...</p>
+                            <div class="mt-auto">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">${book.total_chapters}章</small>
+                                    <button class="btn btn-primary btn-sm" onclick="readBook(${book.id})">
+                                        <i class="bi bi-book-open"></i> 阅读
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            })
+            .catch(error => {
+                console.error('搜索失败:', error);
+                showAlert('搜索失败', 'danger');
+            });
+    }
+</script>
+{% endblock %}

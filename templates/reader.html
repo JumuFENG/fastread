@@ -1,0 +1,1005 @@
+{% extends "base.html" %}
+
+{% block title %}阅读器 - FastRead{% endblock %}
+
+{% block content %}
+<!-- 固定工具栏 -->
+<div class="reader-toolbar">
+    <button class="btn btn-outline-secondary btn-sm" onclick="toggleChapterList()" title="章节目录">
+        <i class="bi bi-list"></i>
+    </button>
+    <button class="btn btn-outline-secondary btn-sm" onclick="toggleSettings()" title="阅读设置">
+        <i class="bi bi-gear"></i>
+    </button>
+    <button class="btn btn-outline-success btn-sm" onclick="toggleExcerpts()" title="摘录管理">
+        <i class="bi bi-bookmark"></i>
+    </button>
+    <button class="btn btn-outline-warning btn-sm" onclick="toggleSensitiveWords()" title="敏感词替换">
+        <i class="bi bi-shield-check"></i>
+    </button>
+</div>
+
+<div class="reader-container">
+    <div class="row">
+        <!-- 章节列表侧边栏 -->
+        <div class="col-md-3 d-md-block">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">章节目录</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div id="chapterList" class="chapter-list">
+                        <!-- 章节列表将通过JavaScript加载 -->
+                    </div>
+                    <div class="text-center p-2" id="chapterListControls" style="display: none;">
+                        <button class="btn btn-outline-secondary btn-sm me-2" onclick="showMoreChapters('prev')">
+                            <i class="bi bi-chevron-up"></i> 更多
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="showMoreChapters('next')">
+                            <i class="bi bi-chevron-down"></i> 更多
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 阅读区域 -->
+        <div id="mainContent" class="col-md-9">
+            <div class="reader-header mb-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 id="bookTitle">加载中...</h4>
+                        <h6 id="chapterTitle" class="text-muted">加载中...</h6>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 阅读设置面板 -->
+            <div id="settingsPanel" class="floating-panel d-none">
+                <div class="panel-header">
+                    <h6>阅读设置</h6>
+                </div>
+                <div class="panel-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label">字体大小</label>
+                            <input type="range" class="form-range" id="fontSizeSlider" min="12" max="24" value="16"
+                                onchange="changeFontSize(this.value)">
+                            <small class="text-muted">当前: <span id="fontSizeValue">16px</span></small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">行间距</label>
+                            <input type="range" class="form-range" id="lineHeightSlider" min="1.2" max="2.5" step="0.1"
+                                value="1.6" onchange="changeLineHeight(this.value)">
+                            <small class="text-muted">当前: <span id="lineHeightValue">1.6</span></small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">背景主题</label>
+                            <select class="form-select form-select-sm" id="themeSelect"
+                                onchange="changeTheme(this.value)">
+                                <option value="light">浅色</option>
+                                <option value="dark">深色</option>
+                                <option value="sepia">护眼米色</option>
+                                <option value="green">护眼绿色</option>
+                                <option value="blue">护眼蓝色</option>
+                                <option value="gray">护眼灰色</option>
+                                <option value="night">夜间模式</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">字体</label>
+                            <select class="form-select form-select-sm" id="fontSelect"
+                                onchange="changeFont(this.value)">
+                                <option value="system">系统默认</option>
+                                <option value="serif">宋体</option>
+                                <option value="sans-serif">黑体</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 摘录管理面板 -->
+            <div id="excerptsPanel" class="floating-panel d-none">
+                <div class="panel-header">
+                    <h6>摘录管理</h6>
+                </div>
+                <div class="panel-body">
+                    <div class="mb-3">
+                        <button class="btn btn-primary btn-sm" onclick="saveSelectedText()">
+                            <i class="bi bi-plus"></i> 保存选中文本
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="clearExcerpts()">
+                            <i class="bi bi-trash"></i> 清空摘录
+                        </button>
+                    </div>
+                    <div id="excerptsList" class="excerpts-list">
+                        <!-- 摘录列表 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 敏感词替换面板 -->
+            <div id="sensitiveWordsPanel" class="floating-panel d-none">
+                <div class="panel-header">
+                    <h6>敏感词替换</h6>
+                </div>
+                <div class="panel-body">
+                    <div id="sensitiveWordsList" class="sensitive-words-list">
+                        <!-- 敏感词列表 -->
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">添加敏感词</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="newSensitiveWord" placeholder="输入敏感词">
+                            <input type="text" class="form-control" id="replacementWord" placeholder="替换词">
+                            <button class="btn btn-primary" onclick="addSensitiveWord()">添加</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 章节内容 -->
+            <div id="chapterContent" class="reader-content">
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">加载中...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 导航按钮 -->
+            <div class="reader-navigation mt-4">
+                <div class="d-flex justify-content-between">
+                    <button id="prevChapter" class="btn btn-link" onclick="prevChapter()" disabled>
+                        <i class="bi bi-chevron-left"></i> 上一章
+                    </button>
+                    <button class="btn btn-link btn-sm" onclick="toggleAutoScroll()" title="自动滚动">
+                        <i class="bi bi-skip-end"></i>
+                    </button>
+                    <div class="chapter-info">
+                        <input id="chapterProgress" onchange="jumpToChapter()"></input>/&nbsp<span id="totalChapters">1</span>
+                    </div>
+                    <button id="nextChapter" class="btn btn-link" onclick="nextChapter()" disabled>
+                        下一章 <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 移动端章节列表模态框 -->
+<div class="modal fade" id="chapterModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">章节目录</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div id="mobileChapterList" class="chapter-list">
+                    <!-- 移动端章节列表 -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 本地showAlert函数
+    function showAlert(message, type = 'info') {
+        console.log(`[${type.toUpperCase()}] ${message}`);
+
+        // 创建简单的提示
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} position-fixed`;
+        alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        alertDiv.innerHTML = `
+        <div class="d-flex align-items-center">
+            <span class="flex-grow-1">${message}</span>
+            <button type="button" class="btn-close ms-2" onclick="this.parentElement.parentElement.remove()"></button>
+        </div>
+    `;
+
+        document.body.appendChild(alertDiv);
+
+        // 3秒后自动移除
+        setTimeout(() => {
+            if (alertDiv.parentElement) {
+                alertDiv.remove();
+            }
+        }, 3000);
+    }
+
+    let currentBook = null;
+    let chapters = [];
+    let currentChapterIndex = 0;
+    let readingProgress = null;
+    let chapterDisplayRange = { start: 0, end: 20 }; // 默认显示前20章
+    const CHAPTER_DISPLAY_COUNT = 20; // 每次显示的章节数量
+    let excerpts = JSON.parse(localStorage.getItem('excerpts') || '[]');
+    let sensitiveWords = JSON.parse(localStorage.getItem('sensitiveWords') || '{}');
+    let autoScrollEnabled = false;
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const bookId = {{ book_id| tojson
+    }};
+    console.log('阅读器初始化，书籍ID:', bookId);
+
+    loadBook(bookId);
+    loadChapters(bookId).then(() => {
+        loadReadingProgress(bookId);
+    });
+
+    // 加载阅读设置
+    loadReaderSettings();
+
+    // 键盘导航
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowLeft') {
+            prevChapter();
+        } else if (e.key === 'ArrowRight') {
+            nextChapter();
+        }
+    });
+});
+
+    async function loadBook(bookId) {
+        try {
+            const response = await fetch(`/api/books/${bookId}`);
+            currentBook = await response.json();
+            document.getElementById('bookTitle').textContent = currentBook.title;
+        } catch (error) {
+            console.error('加载书籍信息失败:', error);
+        }
+    }
+
+    async function loadChapters(bookId) {
+        try {
+            const response = await fetch(`/api/books/${bookId}/chapters`);
+            chapters = await response.json();
+
+            updateChapterList();
+            updateChapterProgress();
+
+        } catch (error) {
+            console.error('加载章节列表失败:', error);
+        }
+    }
+
+    function updateChapterList() {
+        // 如果章节数量较多，只显示当前章节附近的章节
+        if (chapters.length > CHAPTER_DISPLAY_COUNT) {
+            const halfRange = Math.floor(CHAPTER_DISPLAY_COUNT / 2);
+            chapterDisplayRange.start = Math.max(0, currentChapterIndex - halfRange);
+            chapterDisplayRange.end = Math.min(chapters.length, chapterDisplayRange.start + CHAPTER_DISPLAY_COUNT);
+
+            // 如果接近末尾，调整起始位置
+            if (chapterDisplayRange.end === chapters.length) {
+                chapterDisplayRange.start = Math.max(0, chapters.length - CHAPTER_DISPLAY_COUNT);
+            }
+
+            document.getElementById('chapterListControls').style.display = 'block';
+        } else {
+            chapterDisplayRange.start = 0;
+            chapterDisplayRange.end = chapters.length;
+            document.getElementById('chapterListControls').style.display = 'none';
+        }
+
+        const visibleChapters = chapters.slice(chapterDisplayRange.start, chapterDisplayRange.end);
+
+        const chapterListHtml = visibleChapters.map((chapter, index) => {
+            const actualIndex = chapterDisplayRange.start + index;
+            return `
+            <div class="chapter-item ${actualIndex === currentChapterIndex ? 'active' : ''}" 
+                 onclick="loadChapter(${actualIndex})">
+                <span class="chapter-number">${chapter.chapter_number}</span>
+                <span class="chapter-title">${chapter.title}</span>
+            </div>
+        `;
+        }).join('');
+
+        // 添加范围提示
+        const rangeInfo = chapters.length > CHAPTER_DISPLAY_COUNT ?
+            `<div class="text-muted small p-2 text-center">显示 ${chapterDisplayRange.start + 1}-${chapterDisplayRange.end} / ${chapters.length} 章</div>` : '';
+
+        document.getElementById('chapterList').innerHTML = rangeInfo + chapterListHtml;
+
+        // 移动端显示全部章节
+        const mobileChapterListHtml = chapters.map((chapter, index) => `
+            <div class="chapter-item ${index === currentChapterIndex ? 'active' : ''}" 
+                 onclick="loadChapter(${index}); bootstrap.Modal.getInstance(document.getElementById('chapterModal')).hide();">
+                <span class="chapter-number">${chapter.chapter_number}</span>
+                <span class="chapter-title">${chapter.title}</span>
+            </div>
+        `).join('');
+        document.getElementById('mobileChapterList').innerHTML = mobileChapterListHtml;
+    }
+
+    async function loadChapter(chapterIndex) {
+        if (chapterIndex < 0 || chapterIndex >= chapters.length) {
+            return;
+        }
+
+        currentChapterIndex = chapterIndex;
+        const chapter = chapters[chapterIndex];
+
+        // 显示加载状态
+        const contentDiv = document.getElementById('chapterContent');
+        contentDiv.innerHTML = `
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">加载中...</span>
+            </div>
+            <div class="mt-2">正在获取章节内容...</div>
+        </div>
+    `;
+
+        try {
+            const apiUrl = `/api/books/${currentBook.id}/chapters/${chapter.chapter_number}`;
+            console.log('请求章节内容:', apiUrl);
+
+            const response = await fetch(apiUrl);
+            console.log('API响应状态:', response.status, response.statusText);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const chapterData = await response.json();
+
+            document.getElementById('chapterTitle').textContent = chapterData.title;
+
+            // 处理章节内容
+            let content = chapterData.content || '章节内容为空';
+
+            // 应用敏感词过滤
+            content = applySensitiveWordFilter(content);
+
+            // 将换行符转换为段落
+            const paragraphs = content.split('\n\n').filter(p => p.trim().length > 0);
+            const formattedContent = paragraphs.map(p => `<p>${p.trim()}</p>`).join('');
+
+            contentDiv.innerHTML = `
+            <div class="chapter-text">
+                ${formattedContent}
+            </div>
+            ${!chapterData.is_cached ? '<div class="text-muted small mt-3"><i class="bi bi-cloud-download"></i> 实时获取</div>' : ''}
+        `;
+
+            // 更新章节列表
+            updateChapterList();
+
+            // 更新导航按钮状态
+            document.getElementById('prevChapter').disabled = chapterIndex === 0;
+            document.getElementById('nextChapter').disabled = chapterIndex === chapters.length - 1;
+
+            updateChapterProgress();
+
+            // 保存阅读进度
+            saveReadingProgress();
+
+            // 滚动到顶部
+            window.scrollTo(0, 0);
+            contentDiv.focus();
+            if (autoScrollEnabled) {
+                startAutoScroll();
+            }
+
+            // 添加文本选择事件监听
+            addTextSelectionListener();
+
+        } catch (error) {
+            console.error('加载章节内容失败:', error);
+            contentDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <h5><i class="bi bi-exclamation-triangle"></i> 加载失败</h5>
+                <p>无法获取章节内容，请检查网络连接或稍后重试。</p>
+                <button class="btn btn-outline-danger" onclick="loadChapter(${chapterIndex})">
+                    <i class="bi bi-arrow-clockwise"></i> 重试
+                </button>
+            </div>
+        `;
+            showAlert('加载章节失败', 'danger');
+        }
+    }
+
+    function preloadChapter(chapterIndex) {
+        // 预加载指定章节内容（不渲染，只缓存）
+        if (chapterIndex < 0 || chapterIndex >= chapters.length) return;
+
+        const chapter = chapters[chapterIndex];
+        const apiUrl = `/api/books/${currentBook.id}/chapters/${chapter.chapter_number}/preload`;
+
+        fetch(apiUrl, { method: 'POST' })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`预加载失败: HTTP ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log(`章节 ${chapter.chapter_number} 预加载成功`);
+            })
+            .catch(error => {
+                console.warn(`章节 ${chapter.chapter_number} 预加载失败:`, error);
+            });
+    }
+
+    async function loadReadingProgress(bookId) {
+        currentChapterIndex = 0;
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.log('用户未登录，从第一章开始阅读');
+                let localReadingProgress = JSON.parse(localStorage.getItem('localReadingProgress'));
+                if (localReadingProgress) {
+                    readingProgress = localReadingProgress[bookId];
+                    currentChapterIndex = readingProgress.current_chapter - 1;
+                    console.log('加载本地阅读进度，从第', currentChapterIndex + 1, '章开始');
+                }
+                loadChapter(currentChapterIndex);
+                preloadChapter(currentChapterIndex + 1);
+                return;
+            }
+
+            const response = await fetch(`/api/reading/progress/${bookId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                readingProgress = await response.json();
+                currentChapterIndex = readingProgress.current_chapter - 1;
+                console.log('加载阅读进度，从第', currentChapterIndex + 1, '章开始');
+                loadChapter(currentChapterIndex);
+                preloadChapter(currentChapterIndex + 1);
+            } else {
+                console.log('获取阅读进度失败，从第一章开始');
+                loadChapter(currentChapterIndex);
+            }
+        } catch (error) {
+            console.error('加载阅读进度失败:', error);
+            // 如果没有登录或加载失败，默认从第一章开始
+            console.log('异常情况，从第一章开始');
+            loadChapter(currentChapterIndex);
+        }
+    }
+
+    async function saveReadingProgress() {
+        readingProgress = {
+            current_chapter: currentChapterIndex + 1,
+            reading_position: window.pageYOffset
+        };
+
+        const token = localStorage.getItem('token');
+        if (!token) {
+            let localReadingProgress = JSON.parse(localStorage.getItem('localReadingProgress'))??{};
+            localReadingProgress[currentBook.id] = readingProgress;
+            localStorage.setItem('localReadingProgress', JSON.stringify(localReadingProgress));
+            return;
+        }
+
+        try {
+            await fetch(`/api/reading/progress/${currentBook.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(readingProgress)
+            });
+        } catch (error) {
+            console.error('保存阅读进度失败:', error);
+        }
+    }
+
+    function prevChapter() {
+        if (currentChapterIndex > 0) {
+            loadChapter(currentChapterIndex - 1);
+        }
+    }
+
+    function nextChapter() {
+        if (currentChapterIndex < chapters.length - 1) {
+            loadChapter(currentChapterIndex + 1);
+            preloadChapter(currentChapterIndex + 2);
+        }
+    }
+
+    function updateChapterProgress() {
+        document.getElementById('chapterProgress').value = currentChapterIndex + 1;
+        document.getElementById('totalChapters').textContent = chapters.length;
+    }
+
+    let autoScrollTimer = null;
+
+    function toggleAutoScroll() {
+        autoScrollEnabled = !autoScrollEnabled;
+
+        if (autoScrollEnabled) {
+            startAutoScroll();
+        } else {
+            stopAutoScroll();
+        }
+    }
+
+    function startAutoScroll() {
+        stopAutoScroll(); // 防止多重定时器
+        autoScrollTimer = setInterval(() => {
+            // 每次向下滚动2像素
+            window.scrollBy(0, 10);
+            // 到达底部时自动关闭
+            if ((window.innerHeight + window.scrollY) >= document.body.scrollHeight - 2) {
+                stopAutoScroll();
+            }
+        }, 200);
+    }
+
+    function stopAutoScroll() {
+        if (autoScrollTimer) {
+            clearInterval(autoScrollTimer);
+            autoScrollTimer = null;
+        }
+    }
+
+    function toggleChapterList() {
+        if (window.innerWidth < 768) {
+            new bootstrap.Modal(document.getElementById('chapterModal')).show();
+        } else {
+            const sidebar = document.querySelector('.col-md-3');
+            // 使用ID选择器，更稳定可靠
+            const mainContent = document.getElementById('mainContent');
+
+            if (sidebar.classList.contains('d-none')) {
+                // 显示侧边栏
+                sidebar.classList.remove('d-none');
+                sidebar.classList.add('d-md-block');
+                // 调整正文宽度为9列
+                mainContent.classList.remove('col-md-12');
+                mainContent.classList.add('col-md-9');
+            } else {
+                // 隐藏侧边栏
+                sidebar.classList.add('d-none');
+                sidebar.classList.remove('d-md-block');
+                // 调整正文宽度为12列（全宽）
+                mainContent.classList.remove('col-md-9');
+                mainContent.classList.add('col-md-12');
+            }
+        }
+    }
+
+    function toggleSettings() {
+        hideAllPanels();
+        const panel = document.getElementById('settingsPanel');
+        panel.classList.toggle('d-none');
+    }
+
+    function toggleExcerpts() {
+        hideAllPanels();
+        const panel = document.getElementById('excerptsPanel');
+        panel.classList.toggle('d-none');
+        loadExcerpts();
+    }
+
+    function toggleSensitiveWords() {
+        hideAllPanels();
+        const panel = document.getElementById('sensitiveWordsPanel');
+        panel.classList.toggle('d-none');
+        loadSensitiveWords();
+    }
+
+    function hideAllPanels() {
+        document.getElementById('settingsPanel').classList.add('d-none');
+        document.getElementById('excerptsPanel').classList.add('d-none');
+        document.getElementById('sensitiveWordsPanel').classList.add('d-none');
+    }
+
+    // 阅读设置功能
+    function changeFontSize(size) {
+        document.getElementById('fontSizeValue').textContent = size + 'px';
+        document.querySelector('.reader-content').style.fontSize = size + 'px';
+        localStorage.setItem('readerFontSize', size);
+    }
+
+    function changeLineHeight(height) {
+        document.getElementById('lineHeightValue').textContent = height;
+        document.querySelector('.reader-content').style.lineHeight = height;
+        localStorage.setItem('readerLineHeight', height);
+    }
+
+    function changeTheme(theme) {
+        const content = document.querySelector('.reader-content');
+        const body = document.body;
+
+        // 移除所有主题类
+        content.className = content.className.replace(/theme-\w+/g, '');
+        body.className = body.className.replace(/theme-\w+/g, '');
+
+        // 添加新主题类
+        content.classList.add('theme-' + theme);
+        body.classList.add('theme-' + theme);
+
+        localStorage.setItem('readerTheme', theme);
+    }
+
+    function changeFont(font) {
+        document.querySelector('.reader-content').style.fontFamily = font;
+        localStorage.setItem('readerFont', font);
+    }
+
+    function loadReaderSettings() {
+        const fontSize = localStorage.getItem('readerFontSize') || '16';
+        const lineHeight = localStorage.getItem('readerLineHeight') || '1.6';
+        const theme = localStorage.getItem('readerTheme') || 'light';
+        const font = localStorage.getItem('readerFont') || 'system';
+
+        document.getElementById('fontSizeSlider').value = fontSize;
+        document.getElementById('lineHeightSlider').value = lineHeight;
+        document.getElementById('themeSelect').value = theme;
+        document.getElementById('fontSelect').value = font;
+
+        changeFontSize(fontSize);
+        changeLineHeight(lineHeight);
+        changeTheme(theme);
+        changeFont(font);
+    }
+
+    // 敏感词过滤功能
+    function applySensitiveWordFilter(content) {
+        if (!sensitiveWords[currentBook.id]) {
+            return content;
+        }
+        let filteredContent = content;
+        sensitiveWords[currentBook.id].forEach(wordPair => {
+            if (!wordPair.enabled) {
+                return;
+            }
+            const regex = new RegExp(wordPair.original, 'gi');
+            filteredContent = filteredContent.replace(regex, wordPair.replacement);
+        });
+        return filteredContent;
+    }
+
+    function addSensitiveWord() {
+        const originalWord = document.getElementById('newSensitiveWord').value.trim();
+        const replacementWord = document.getElementById('replacementWord').value.trim();
+
+        if (!originalWord) {
+            showAlert('请输入敏感词', 'warning');
+            return;
+        }
+        if (replacementWord == undefined || replacementWord === null) {
+            showAlert('请输入替换词', 'warning');
+            return;
+        }
+
+        if (!sensitiveWords[currentBook.id]) {
+            sensitiveWords[currentBook.id] = [];
+        }
+
+        // 检查是否已存在
+        const exists = sensitiveWords[currentBook.id].some(pair => pair.original === originalWord);
+        if (exists) {
+            showAlert('该敏感词已存在', 'warning');
+            return;
+        }
+
+        sensitiveWords[currentBook.id].push({ original: originalWord, replacement: replacementWord, enabled: true });
+        localStorage.setItem('sensitiveWords', JSON.stringify(sensitiveWords));
+
+        document.getElementById('newSensitiveWord').value = '';
+        document.getElementById('replacementWord').value = '';
+
+        loadSensitiveWords();
+        showAlert('敏感词添加成功', 'success');
+    }
+
+    function toggleSensitiveWord(index) {
+        sensitiveWords[index].enabled = !sensitiveWords[index].enabled;
+        localStorage.setItem('sensitiveWords', JSON.stringify(sensitiveWords));
+        loadSensitiveWords();
+    }
+
+    function removeSensitiveWord(index) {
+        if (!sensitiveWords[currentBook.id]) {
+            return;
+        }
+
+        sensitiveWords[currentBook.id].splice(index, 1);
+        localStorage.setItem('sensitiveWords', JSON.stringify(sensitiveWords));
+        loadSensitiveWords();
+        showAlert('敏感词删除成功', 'success');
+    }
+
+    function loadSensitiveWords() {
+        const container = document.getElementById('sensitiveWordsList');
+        if (!sensitiveWords[currentBook.id] || sensitiveWords[currentBook.id].length === 0) {
+            container.innerHTML = '<div class="text-muted text-center">暂无敏感词</div>';
+            return;
+        }
+
+        const html = sensitiveWords[currentBook.id].map((wordPair, index) => `
+            <div class="sensitive-word-item">
+                <div class="word-pair">
+                    <input class="form-check-input" type="checkbox" checked="${wordPair.enabled}" onchange="toggleSensitiveWord(${index})">
+                    <span class="original-word">${wordPair.original}</span>
+                    <span>→</span>
+                    <span class="replacement-word">${wordPair.replacement}</span>
+                </div>
+                <button class="btn btn-outline-danger btn-sm" onclick="removeSensitiveWord(${index})">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        `).join('');
+
+        container.innerHTML = html;
+    }
+
+    // 摘录功能
+    function addTextSelectionListener() {
+        document.addEventListener('mouseup', function () {
+            const selection = window.getSelection();
+            if (selection.toString().trim().length > 0) {
+                showSelectionTooltip(selection);
+            }
+        });
+    }
+
+    function showSelectionTooltip(selection) {
+        // 移除已存在的工具提示
+        const existingTooltip = document.querySelector('.selection-tooltip');
+        if (existingTooltip) {
+            existingTooltip.remove();
+        }
+
+        const selectedText = selection.toString().trim();
+        if (selectedText.length < 5) return; // 太短的文本不显示工具提示
+
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+
+        const tooltip = document.createElement('div');
+        tooltip.className = 'selection-tooltip';
+        tooltip.innerHTML = `
+            <button class="btn btn-primary btn-sm" onclick="saveExcerpt('${selectedText.replace(/'/g, "\\'")}')">
+                <i class="bi bi-bookmark-plus"></i> 保存摘录
+            </button>
+        `;
+
+        tooltip.style.cssText = `
+            position: fixed;
+            top: ${rect.top - 40}px;
+            left: ${rect.left}px;
+            z-index: 10000;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        `;
+
+        document.body.appendChild(tooltip);
+
+        // 3秒后自动移除
+        setTimeout(() => {
+            if (tooltip.parentElement) {
+                tooltip.remove();
+            }
+        }, 3000);
+    }
+
+    function saveSelectedText() {
+        const selection = window.getSelection();
+        const selectedText = selection.toString().trim();
+
+        if (!selectedText) {
+            showAlert('请先选择要摘录的文本', 'warning');
+            return;
+        }
+
+        saveExcerpt(selectedText);
+    }
+
+    function saveExcerpt(text) {
+        const excerpt = {
+            id: Date.now(),
+            text: text,
+            chapter: chapters[currentChapterIndex]?.title || '未知章节',
+            chapterNumber: chapters[currentChapterIndex]?.chapter_number || 0,
+            bookTitle: currentBook?.title || '未知书籍',
+            timestamp: new Date().toLocaleString()
+        };
+
+        excerpts.unshift(excerpt); // 添加到开头
+        localStorage.setItem('excerpts', JSON.stringify(excerpts));
+
+        // 移除选择工具提示
+        const tooltip = document.querySelector('.selection-tooltip');
+        if (tooltip) {
+            tooltip.remove();
+        }
+
+        // 清除选择
+        window.getSelection().removeAllRanges();
+
+        showAlert('摘录保存成功', 'success');
+
+        // 如果摘录面板打开，刷新列表
+        if (!document.getElementById('excerptsPanel').classList.contains('d-none')) {
+            loadExcerpts();
+        }
+    }
+
+    function removeExcerpt(id) {
+        excerpts = excerpts.filter(excerpt => excerpt.id !== id);
+        localStorage.setItem('excerpts', JSON.stringify(excerpts));
+        loadExcerpts();
+        showAlert('摘录删除成功', 'success');
+    }
+
+    function clearExcerpts() {
+        if (confirm('确定要清空所有摘录吗？')) {
+            excerpts = [];
+            localStorage.setItem('excerpts', JSON.stringify(excerpts));
+            loadExcerpts();
+            showAlert('摘录已清空', 'success');
+        }
+    }
+
+    function loadExcerpts() {
+        const container = document.getElementById('excerptsList');
+        if (excerpts.length === 0) {
+            container.innerHTML = '<div class="text-muted text-center">暂无摘录</div>';
+            return;
+        }
+
+        const html = excerpts.map(excerpt => `
+            <div class="excerpt-item">
+                <div class="excerpt-text">${excerpt.text}</div>
+                <div class="excerpt-meta">
+                    <span>${excerpt.bookTitle} - ${excerpt.chapter}</span>
+                    <div>
+                        <small class="text-muted">${excerpt.timestamp}</small>
+                        <button class="btn btn-outline-danger btn-sm ms-2" onclick="removeExcerpt(${excerpt.id})">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        container.innerHTML = html;
+    }
+
+
+
+    // 章节跳转功能
+    function showChapterJump() {
+        const modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.innerHTML = `
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">跳转到章节</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">章节号</label>
+                        <input type="number" class="form-control" id="jumpChapterNumber" 
+                               value="${currentChapterIndex + 1}" min="1" max="${chapters.length}" 
+                               placeholder="输入章节号 (1-${chapters.length})">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">或选择章节</label>
+                        <select class="form-select" id="jumpChapterSelect">
+                            ${chapters.map((chapter, index) =>
+            `<option value="${index}" ${index === currentChapterIndex ? 'selected' : ''}>
+                                    第${chapter.chapter_number}章 - ${chapter.title}
+                                </option>`
+        ).join('')}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="jumpToChapter()">跳转</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+        document.body.appendChild(modal);
+        const bootstrapModal = new bootstrap.Modal(modal);
+        bootstrapModal.show();
+
+        // 同步输入框和选择框
+        const numberInput = modal.querySelector('#jumpChapterNumber');
+        const selectInput = modal.querySelector('#jumpChapterSelect');
+
+        numberInput.addEventListener('input', function () {
+            const chapterIndex = parseInt(this.value) - 1;
+            if (chapterIndex >= 0 && chapterIndex < chapters.length) {
+                selectInput.value = chapterIndex;
+            }
+        });
+
+        selectInput.addEventListener('change', function () {
+            numberInput.value = parseInt(this.value) + 1;
+        });
+
+        // 模态框关闭后移除元素
+        modal.addEventListener('hidden.bs.modal', () => {
+            document.body.removeChild(modal);
+        });
+    }
+
+    function jumpToChapter() {
+        const chapterIndex = document.getElementById('chapterProgress').value - 1;
+
+        if (chapterIndex >= 0 && chapterIndex < chapters.length) {
+            loadChapter(chapterIndex);
+
+            // 关闭模态框
+            const modal = document.querySelector('.modal.show');
+            if (modal) {
+                bootstrap.Modal.getInstance(modal).hide();
+            }
+            preloadChapter(chapterIndex + 1);
+        }
+    }
+
+    // 显示更多章节
+    function showMoreChapters(direction) {
+        if (direction === 'prev' && chapterDisplayRange.start > 0) {
+            chapterDisplayRange.start = Math.max(0, chapterDisplayRange.start - CHAPTER_DISPLAY_COUNT);
+            chapterDisplayRange.end = chapterDisplayRange.start + CHAPTER_DISPLAY_COUNT;
+        } else if (direction === 'next' && chapterDisplayRange.end < chapters.length) {
+            chapterDisplayRange.end = Math.min(chapters.length, chapterDisplayRange.end + CHAPTER_DISPLAY_COUNT);
+            chapterDisplayRange.start = chapterDisplayRange.end - CHAPTER_DISPLAY_COUNT;
+        }
+
+        updateChapterList();
+    }
+
+    function showProgressOnNavigation() {
+        // 进度条指示：根据滚动位置设置reader-navigation背景渐变
+        const nav = document.querySelector('.reader-navigation');
+        const scrollTop = window.pageYOffset;
+        const docHeight = document.body.scrollHeight - window.innerHeight;
+        let percent = 0;
+        if (docHeight > 0) {
+            percent = Math.min(1, scrollTop / docHeight);
+        }
+        nav.style.background = `linear-gradient(to right, #bcdff1 ${percent * 100}%, #e9ecef ${percent * 100}%)`;
+    }
+
+    // 点击外部关闭面板
+    document.addEventListener('click', function (e) {
+        const panels = ['settingsPanel', 'excerptsPanel', 'sensitiveWordsPanel'];
+        const toolbar = document.querySelector('.reader-toolbar');
+
+        if (!toolbar.contains(e.target)) {
+            panels.forEach(panelId => {
+                const panel = document.getElementById(panelId);
+                if (!panel.contains(e.target)) {
+                    panel.classList.add('d-none');
+                }
+            });
+        }
+    });
+
+    // 定期保存阅读进度
+    setInterval(saveReadingProgress, 30000); // 每30秒保存一次
+    setInterval(showProgressOnNavigation, 300); // 每300毫秒更新进度条
+</script>
+{% endblock %}

@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}FastRead{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/static/css/style.css" rel="stylesheet">
+    {% block styles %}{% endblock %}
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-book"></i> FastRead
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">书架</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showSearchModal()">搜索书籍</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showSourceModal()">书源管理</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item" id="loginNav">
+                        <a class="nav-link" href="#" onclick="showLoginModal()">登录</a>
+                    </li>
+                    <li class="nav-item d-none" id="userNav">
+                        <div class="dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                <span id="username"></span>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="showReadingHistory()">阅读历史</a></li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li><a class="dropdown-item" href="#" onclick="logout()">退出登录</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mt-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- 登录模态框 -->
+    <div class="modal fade" id="loginModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">用户登录</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="loginForm">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">用户名</label>
+                            <input type="text" class="form-control" id="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">密码</label>
+                            <input type="password" class="form-control" id="password" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="login()">登录</button>
+                    <button type="button" class="btn btn-link" onclick="showRegisterModal()">注册账号</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 搜索模态框 -->
+    <div class="modal fade" id="searchModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">搜索书籍</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- 搜索方式选择 -->
+                    <ul class="nav nav-tabs mb-3" id="searchTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="keyword-tab" data-bs-toggle="tab"
+                                data-bs-target="#keyword-search" type="button" role="tab">
+                                关键词搜索
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="url-tab" data-bs-toggle="tab" data-bs-target="#url-import"
+                                type="button" role="tab">
+                                URL导入
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="searchTabContent">
+                        <!-- 关键词搜索 -->
+                        <div class="tab-pane fade show active" id="keyword-search" role="tabpanel">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <select class="form-select" id="searchSource">
+                                        <option value="">选择书源</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="searchKeyword"
+                                            placeholder="输入书名或作者">
+                                        <button class="btn btn-primary" onclick="searchBooks()">搜索</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- URL导入 -->
+                        <div class="tab-pane fade" id="url-import" role="tabpanel">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <select class="form-select" id="urlSource">
+                                        <option value="">选择书源</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="input-group">
+                                        <input type="url" class="form-control" id="bookUrl" placeholder="粘贴书籍详情页URL"
+                                            onpaste="handleUrlPaste(event)" oninput="validateBookUrl()">
+                                        <button class="btn btn-outline-secondary" onclick="pasteFromClipboard()"
+                                            title="从剪贴板粘贴">
+                                            <i class="bi bi-clipboard"></i>
+                                        </button>
+                                        <button class="btn btn-info" onclick="previewBookInfo()" title="预览书籍信息">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        <button class="btn btn-success" onclick="importFromUrl()">导入</button>
+                                    </div>
+                                    <div id="urlValidation" class="form-text"></div>
+                                </div>
+                            </div>
+
+                            <!-- URL导入说明 -->
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i>
+                                <strong>使用说明：</strong>
+                                <ul class="mb-0 mt-2">
+                                    <li>选择对应的书源</li>
+                                    <li>粘贴书籍详情页的完整URL</li>
+                                    <li>点击导入按钮开始导入书籍</li>
+                                    <li>系统会自动获取书籍信息和所有章节</li>
+                                </ul>
+                            </div>
+
+                            <!-- 智能识别 -->
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="autoDetectSource" checked>
+                                    <label class="form-check-label" for="autoDetectSource">
+                                        智能识别书源（根据URL自动匹配书源）
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- 批量导入 -->
+                            <div class="mt-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6>批量URL导入</h6>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-info" onclick="showBatchExample()" title="显示示例">
+                                            <i class="bi bi-lightbulb"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary" onclick="clearBatchUrls()" title="清空">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <textarea class="form-control" id="batchUrls" rows="4"
+                                    placeholder="每行一个URL，支持批量导入多本书籍&#10;例如：&#10;https://book.qidian.com/info/1004608738&#10;https://www.biquge.com/book/12345/&#10;http://book.zongheng.com/book/878590.html"></textarea>
+                                <div class="d-flex justify-content-between align-items-center mt-2">
+                                    <small class="text-muted">
+                                        <span id="urlCount">0</span> 个URL
+                                        <span class="ms-2">支持多个URL，每行一个</span>
+                                    </small>
+                                    <button class="btn btn-outline-success btn-sm" onclick="batchImportFromUrls()">
+                                        <i class="bi bi-cloud-download"></i> 批量导入
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="searchResults"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 书源管理模态框 -->
+    <div class="modal fade" id="sourceModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">书源管理</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <!-- 左侧：书源列表 -->
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6>已有书源</h6>
+                                <button class="btn btn-success btn-sm" onclick="showAddSourceForm()">
+                                    <i class="bi bi-plus"></i> 添加书源
+                                </button>
+                            </div>
+                            <div id="sourceList" class="source-list">
+                                <!-- 书源列表将通过JavaScript加载 -->
+                            </div>
+                        </div>
+
+                        <!-- 右侧：添加/编辑书源表单 -->
+                        <div class="col-md-6">
+                            <div id="sourceForm" class="d-none">
+                                <h6>添加书源</h6>
+                                <form id="addSourceForm">
+                                    <div class="mb-3">
+                                        <label class="form-label">书源名称</label>
+                                        <input type="text" class="form-control" id="sourceName" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">网站首页</label>
+                                        <input type="url" class="form-control" id="sourceUrl" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">搜索URL</label>
+                                        <input type="text" class="form-control" id="searchUrl"
+                                            placeholder="使用 {keyword} 作为关键词占位符" required>
+                                        <small class="text-muted">例如: https://example.com/search?q={keyword}</small>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">书籍URL模式</label>
+                                        <input type="text" class="form-control" id="bookUrlPattern"
+                                            placeholder="书籍详情页URL模式">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">章节URL模式</label>
+                                        <input type="text" class="form-control" id="chapterUrlPattern"
+                                            placeholder="章节页面URL模式">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">内容选择器</label>
+                                        <input type="text" class="form-control" id="contentSelector"
+                                            placeholder="CSS选择器，用于提取章节内容">
+                                        <small class="text-muted">例如: .content, #chapter-content, .text</small>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-primary"
+                                            onclick="saveBookSource()">保存</button>
+                                        <button type="button" class="btn btn-secondary"
+                                            onclick="hideAddSourceForm()">取消</button>
+                                        <button type="button" class="btn btn-info"
+                                            onclick="testBookSource()">测试</button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- 预设书源 -->
+                            <div id="presetSources">
+                                <h6>预设书源</h6>
+                                <p class="text-muted small">点击下方按钮快速添加常用书源</p>
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-outline-primary btn-sm" onclick="addPresetSource('biquge')">
+                                        笔趣阁 (示例)
+                                    </button>
+                                    <button class="btn btn-outline-primary btn-sm" onclick="addPresetSource('qidian')">
+                                        起点中文网 (示例)
+                                    </button>
+                                    <button class="btn btn-outline-primary btn-sm" onclick="addPresetSource('custom')">
+                                        自定义书源
+                                    </button>
+                                </div>
+
+                                <div class="mt-4">
+                                    <h6>导入书源</h6>
+                                    <div class="mb-3">
+                                        <label class="form-label">从JSON导入</label>
+                                        <textarea class="form-control" id="importJson" rows="4"
+                                            placeholder="粘贴书源JSON配置"></textarea>
+                                        <button class="btn btn-success btn-sm mt-2"
+                                            onclick="importFromJson()">导入</button>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">从文件导入</label>
+                                        <input type="file" class="form-control" id="importFile" accept=".json,.txt">
+                                        <button class="btn btn-success btn-sm mt-2"
+                                            onclick="importFromFile()">导入文件</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/app.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>
