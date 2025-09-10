@@ -195,6 +195,8 @@ class BaseBookSourceParser(ABC):
         next_base, next_idx = parse_sec(next_sec)
         if cur_base is None or next_base is None:
             return False
+        if next_idx == 2 and next_sec.startswith(cur_sec):
+            return True
         return cur_base == next_base and next_idx == cur_idx + 1
 
     # 以下方法可以被子类重写以实现特定书源的解析逻辑
@@ -202,12 +204,35 @@ class BaseBookSourceParser(ABC):
         """获取搜索结果的下一页链接，默认不支持分页"""
         return None
 
+    @property
+    def next_chapter_list_selector(self) -> str:
+        """返回下一章节列表的选择器，默认不支持分页"""
+        return ''
+
     def get_next_chapter_list_page(self, soup: BeautifulSoup, book_url: str) -> Optional[str]:
-        """获取章节列表的下一页链接，默认不支持分页"""
+        if not self.next_chapter_list_selector:
+            return None
+
+        next_ele = soup.select_one(self.next_chapter_list_selector)
+        if next_ele and next_ele.get('href'):
+            return self.build_full_url(next_ele.get('href'), book_url)
         return None
+
+    @property
+    def next_section_selector(self) -> str:
+        """返回章节下一部分的选择器，默认不支持多部分章节"""
+        return ''
 
     def get_chapter_next_section(self, soup: BeautifulSoup, chapter_url: str, chapter_sec: str) -> Optional[str]:
         """获取章节的下一部分链接，默认不支持多部分章节"""
+        if not self.next_section_selector:
+            return None
+
+        next_ele = soup.select_one('#pb_next')
+        if next_ele:
+            next_sec = self.build_full_url(next_ele.get('href'), chapter_url)
+            if self.next_section_match(next_sec, chapter_sec):
+                return next_sec
         return None
 
     def get_search_url(self, keyword: str) -> str:
@@ -609,6 +634,8 @@ class BaseBookSourceParser(ABC):
             r'^\s*VIP\s*$',  # VIP行
             r'^\s*订阅\s*$',  # 订阅行
             r'^\s*本章未完，请翻页继续阅读.*$',  # 翻页提示
+            r'.*本小章还未完，请点击下一页.*',
+            r'.*这章没有结束，请点击下一页继续.*',
             r'^\s*未完待续.*$',  # 未完待续
             r'^\s*点击进入.*$',  # 点击进入
             r'^\s*更多免费章节.*$',  # 更多免费章节
@@ -634,15 +661,13 @@ class BaseBookSourceParser(ABC):
         """获取解析器名称，用于动态加载"""
         return cls.__name__.lower().replace('parser', '')
 
+    @classmethod
     def can_handle_url(self, url: str) -> bool:
         """判断是否可以处理指定URL"""
-        if not url or not self.base_url:
+        if not url:
             return False
 
-        parsed_url = urlparse(url)
-        parsed_base = urlparse(self.base_url)
-
-        return parsed_url.netloc == parsed_base.netloc
+        return True
 
     def bg_image_url(self, soup, ele_selctor) -> str:
         # 提取封面

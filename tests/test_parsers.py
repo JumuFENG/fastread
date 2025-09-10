@@ -2,7 +2,9 @@
 """
 书源解析器测试脚本
 """
-
+import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import asyncio
 from parsers.parser_loader import get_parser_for_source, get_parser_for_url
 
@@ -198,6 +200,7 @@ async def test_ddyueshu():
     # test_get_chapter_list
     test_book_url = 'https://m.ddyueshu.cc/wapbook/30053797.html'
     # binfo = await parser.get_book_info(test_book_url)
+    # print(binfo)
     bchapters = await parser.get_chapter_list(test_book_url)
     print(bchapters)
     # test_chapter_url = 'https://m.ddyueshu.cc/wapbook/30053797_88380227.html'
@@ -308,14 +311,14 @@ async def test_biquge():
 
     # sr = await parser.search_books('三寸人间')
     # print(sr, len(sr))
-    test_book_url = 'https://www.biquuge.com/113/113633/'
+    # test_book_url = 'https://www.biquuge.com/113/113633/'
     # binfo = await parser.get_book_info(test_book_url)
     # print(binfo.title, binfo.author, binfo.description, binfo.cover_url)
-    bchapters = await parser.get_chapter_list(test_book_url)
-    print(len(bchapters))
-    # test_chapter_url = 'https://www.biquuge.com/7/7934/1210968.html'
-    # chapter_content = await parser.get_chapter_content(test_chapter_url)
-    # print(chapter_content)
+    # bchapters = await parser.get_chapter_list(test_book_url)
+    # print(len(bchapters))
+    test_chapter_url = 'https://www.biquuge.com/7/7934/1210968.html'
+    chapter_content = await parser.get_chapter_content(test_chapter_url)
+    print(chapter_content)
 
 async def test_xszj():
     test_configs = [
@@ -353,13 +356,13 @@ async def test_xszj():
     # print(binfo.title, binfo.author, binfo.description, binfo.cover_url)
     # bchapters = await parser.get_chapter_list(test_book_url)
     # print(len(bchapters))
-    test_chapter_url = 'https://xszj.org/b/413589/c/5786882'
+    test_chapter_url = 'https://xszj.org/b/413589/c/15830987'
     chapter_content = await parser.get_chapter_content(test_chapter_url)
     print(chapter_content)
 
 
 if __name__ == "__main__":
-    asyncio.run(test_xszj())
+    asyncio.run(test_ddyueshu())
     # from urllib.parse import urlparse
     # next_sec = 'https://xszj.org/b/413589/c/5786882?page=2'
     # chapter_sec = 'https://xszj.org/b/413589/c/5786882'

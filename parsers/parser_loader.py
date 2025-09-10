@@ -101,10 +101,9 @@ class ParserLoader:
         
         # 尝试找到能处理该URL的特定解析器
         for parser_class in self._parsers.values():
-            temp_parser = parser_class(source_config)
-            if temp_parser.can_handle_url(url):
+            if parser_class.can_handle_url(url):
                 print(f"根据URL使用特定解析器: {parser_class.__name__}")
-                return temp_parser
+                return parser_class(source_config)
         
         # 如果没有找到特定解析器，使用基础解析器
         print(f"根据URL使用基础解析器")
