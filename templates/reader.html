@@ -22,7 +22,7 @@
 <div class="reader-container">
     <div class="row">
         <!-- 章节列表侧边栏 -->
-        <div class="col-md-3 d-md-block">
+        <div class="col-md-3 d-none">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h6 class="mb-0">章节目录</h6>
@@ -44,12 +44,12 @@
         </div>
 
         <!-- 阅读区域 -->
-        <div id="mainContent" class="col-md-9">
+        <div id="mainContent" class="col-md-12">
             <div class="reader-header mb-3">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h4 id="bookTitle">加载中...</h4>
-                        <h6 id="chapterTitle" class="text-muted">加载中...</h6>
+                        <h4><a id="bookTitle" href="#" target="_blank">加载中...</a></h4>
+                        <h5 id="chapterTitle" class="text-muted">加载中...</h5>
                     </div>
                 </div>
             </div>
@@ -94,6 +94,14 @@
                                 <option value="serif">宋体</option>
                                 <option value="sans-serif">黑体</option>
                             </select>
+                        </div>
+                        <div class="col-md-6">
+                            <input type="checkbox" class="form-check-input" id="autoScrollCheckbox"
+                                onchange="toggleAutoScroll()">
+                            <label class="form-check-label" for="autoScrollCheckbox">自动滚动</label>
+                            <input type="number" class="form-control form-control-sm" id="autoScrollSpeed"
+                                placeholder="滚动速度 (ms)" value="10" min="20" style="width: 50px; display: inline-block; margin-left: 10px;"
+                                onchange="updateAutoScrollSpeed()">
                         </div>
                     </div>
                 </div>
@@ -152,16 +160,18 @@
             <div class="reader-navigation mt-4">
                 <div class="d-flex justify-content-between">
                     <button id="prevChapter" class="btn btn-link" onclick="prevChapter()" disabled>
-                        <i class="bi bi-chevron-left"></i> 上一章
+                        <i class="bi bi-chevron-left"></i>
+                        <span class="d-none d-md-inline">上一章</span>
                     </button>
-                    <button class="btn btn-link btn-sm" onclick="toggleAutoScroll()" title="自动滚动">
+                    <button class="btn btn-link btn-sm" onclick="toggleScrollTimer()" title="自动滚动">
                         <i class="bi bi-skip-end"></i>
                     </button>
                     <div class="chapter-info">
                         <input id="chapterProgress" onchange="jumpToChapter()"></input>/&nbsp<span id="totalChapters">1</span>
                     </div>
                     <button id="nextChapter" class="btn btn-link" onclick="nextChapter()" disabled>
-                        下一章 <i class="bi bi-chevron-right"></i>
+                        <span class="d-none d-md-inline">下一章</span>
+                        <i class="bi bi-chevron-right"></i>
                     </button>
                 </div>
             </div>
@@ -226,6 +236,7 @@
     let excerpts = JSON.parse(localStorage.getItem('excerpts') || '[]');
     let sensitiveWords = JSON.parse(localStorage.getItem('sensitiveWords') || '{}');
     let autoScrollEnabled = false;
+    let autoScrollSpeed = 30;
 
     document.addEventListener('DOMContentLoaded', function () {
         const bookId = {{ book_id| tojson
@@ -255,6 +266,7 @@
             const response = await fetch(`/api/books/${bookId}`);
             currentBook = await response.json();
             document.getElementById('bookTitle').textContent = currentBook.title;
+            document.getElementById('bookTitle').href = currentBook.source_url;
         } catch (error) {
             console.error('加载书籍信息失败:', error);
         }
@@ -368,7 +380,7 @@
 
             contentDiv.innerHTML = `
             <div class="chapter-text">
-                ${formattedContent}
+                ${formattedContent}<p></p>
             </div>
             ${!chapterData.is_cached ? '<div class="text-muted small mt-3"><i class="bi bi-cloud-download"></i> 实时获取</div>' : ''}
         `;
@@ -388,8 +400,12 @@
             // 滚动到顶部
             window.scrollTo(0, 0);
             contentDiv.focus();
-            if (autoScrollEnabled) {
-                startAutoScroll();
+            if (autoScrollTimer) {
+                if (autoScrollEnabled) {
+                    startAutoScroll();
+                } else {
+                    stopAutoScroll();
+                }
             }
 
             // 添加文本选择事件监听
@@ -523,24 +539,30 @@
 
     function toggleAutoScroll() {
         autoScrollEnabled = !autoScrollEnabled;
+    }
 
-        if (autoScrollEnabled) {
-            startAutoScroll();
-        } else {
+    function toggleScrollTimer() {
+        if (autoScrollTimer) {
             stopAutoScroll();
+        } else {
+            startAutoScroll();
         }
+    }
+
+    function updateAutoScrollSpeed() {
+        const speedInput = document.getElementById('autoScrollSpeed');
+        autoScrollSpeed = parseInt(speedInput.value);
     }
 
     function startAutoScroll() {
         stopAutoScroll(); // 防止多重定时器
         autoScrollTimer = setInterval(() => {
-            // 每次向下滚动2像素
-            window.scrollBy(0, 10);
             // 到达底部时自动关闭
-            if ((window.innerHeight + window.scrollY) >= document.body.scrollHeight - 2) {
-                stopAutoScroll();
+            if ((window.innerHeight + window.scrollY) < document.body.scrollHeight - autoScrollSpeed) {
+                // 每次向下滚动2像素
+                window.scrollBy(0, autoScrollSpeed);
             }
-        }, 200);
+        }, 500);
     }
 
     function stopAutoScroll() {
@@ -580,6 +602,15 @@
         hideAllPanels();
         const panel = document.getElementById('settingsPanel');
         panel.classList.toggle('d-none');
+        if (!panel.classList.contains('d-none')) {
+            if (autoScrollTimer) {
+                stopAutoScroll();
+            }
+        } else {
+            if (autoScrollEnabled) {
+                startAutoScroll();
+            }
+        }
     }
 
     function toggleExcerpts() {
@@ -645,6 +676,8 @@
         document.getElementById('lineHeightSlider').value = lineHeight;
         document.getElementById('themeSelect').value = theme;
         document.getElementById('fontSelect').value = font;
+        document.getElementById('autoScrollCheckbox').checked = autoScrollEnabled;
+        document.getElementById('autoScrollSpeed').value = autoScrollSpeed;
 
         changeFontSize(fontSize);
         changeLineHeight(lineHeight);
