@@ -11,3 +11,4 @@ lxml==4.9.3
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-dotenv==1.0.0
+glom==24.11.0

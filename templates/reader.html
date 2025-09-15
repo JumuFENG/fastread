@@ -455,7 +455,7 @@
             if (!token) {
                 console.log('用户未登录，从第一章开始阅读');
                 let localReadingProgress = JSON.parse(localStorage.getItem('localReadingProgress'));
-                if (localReadingProgress) {
+                if (localReadingProgress && localReadingProgress[bookId]) {
                     readingProgress = localReadingProgress[bookId];
                     currentChapterIndex = readingProgress.current_chapter - 1;
                     console.log('加载本地阅读进度，从第', currentChapterIndex + 1, '章开始');
@@ -524,10 +524,9 @@
     }
 
     function nextChapter() {
-        if (currentChapterIndex < chapters.length - 1) {
-            loadChapter(currentChapterIndex + 1);
-            preloadChapter(currentChapterIndex + 2);
-        }
+        let i2 = currentChapterIndex + 2;
+        if (currentChapterIndex + 1 < chapters.length) loadChapter(currentChapterIndex + 1);
+        if (i2 < chapters.length) preloadChapter(i2);
     }
 
     function updateChapterProgress() {

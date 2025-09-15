@@ -76,7 +76,9 @@
                         <p class="card-text small flex-grow-1">${book.description.substring(0, 100)}...</p>
                         <div class="mt-auto">
                             <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-muted">${book.total_chapters}章</small>
+                                <button class="btn btn-inline-secondary btn-sm" title="更新章节" onclick="updateBookChapters(${book.id})">
+                                    ${book.total_chapters}章<i class="bi bi-arrow-clockwise"></i>
+                                </button>
                                 <div class="btn-group btn-group-sm">
                                     <button class="btn btn-primary" onclick="readBook(${book.id})">
                                         <i class="bi bi-book-open"></i> 阅读
@@ -99,6 +101,18 @@
         }
     }
 
+    async function updateBookChapters(bookId) {
+        try {
+            const response = await fetch(`/api/books/${bookId}/update`, { method: 'POST' });
+            const data = await response.json();
+            showAlert(data.message || '章节已更新', 'success');
+            loadBooks();
+        } catch (error) {
+            console.error('章节更新失败:', error);
+            showAlert('章节更新失败', 'danger');
+        }
+    }
+
     function readBook(bookId) {
         window.location.href = `/book/${bookId}`;
     }
@@ -116,6 +130,7 @@
             if (response.ok) {
                 showAlert('书籍删除成功', 'success');
                 loadBooks();
+                deleteLocalBookStorage(bookId);
             } else {
                 showAlert('删除失败', 'danger');
             }
@@ -123,6 +138,12 @@
             console.error('删除书籍失败:', error);
             showAlert('删除失败', 'danger');
         }
+    }
+
+    function deleteLocalBookStorage(bookId) {
+        let localReadingProgress = JSON.parse(localStorage.getItem('localReadingProgress'))??{};
+        delete localReadingProgress[bookId];
+        localStorage.setItem('localReadingProgress', JSON.stringify(localReadingProgress));
     }
 
     function searchLocalBooks() {

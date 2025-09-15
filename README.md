@@ -113,9 +113,6 @@ python init_sources.py
   "name": "书源名称",
   "url": "https://example.com",
   "search_url": "https://example.com/search?q={keyword}",
-  "book_url_pattern": "/book/*",
-  "chapter_url_pattern": "/book/*/chapter/*",
-  "content_selector": ".content"
 }
 ```
 

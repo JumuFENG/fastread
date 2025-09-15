@@ -26,7 +26,7 @@
                         <a class="nav-link" href="/">书架</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#" onclick="showSearchModal()">搜索书籍</a>
+                        <a class="nav-link" href="#" onclick="showSearchModal()">添加书籍</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="#" onclick="showSourceModal()">书源管理</a>
@@ -93,68 +93,59 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">搜索书籍</h5>
+                    <h5 class="modal-title">添加书籍</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <!-- 搜索方式选择 -->
                     <ul class="nav nav-tabs mb-3" id="searchTabs" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="keyword-tab" data-bs-toggle="tab"
-                                data-bs-target="#keyword-search" type="button" role="tab">
-                                关键词搜索
+                            <button class="nav-link active" id="url-tab" data-bs-toggle="tab" data-bs-target="#url-import"
+                                type="button" role="tab">
+                                URL导入
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="url-tab" data-bs-toggle="tab" data-bs-target="#url-import"
-                                type="button" role="tab">
-                                URL导入
+                            <button class="nav-link" id="keyword-tab" data-bs-toggle="tab"
+                                data-bs-target="#keyword-search" type="button" role="tab">
+                                搜索书籍
                             </button>
                         </li>
                     </ul>
 
                     <div class="tab-content" id="searchTabContent">
                         <!-- 关键词搜索 -->
-                        <div class="tab-pane fade show active" id="keyword-search" role="tabpanel">
+                        <div class="tab-pane fade" id="keyword-search" role="tabpanel">
                             <div class="row mb-3">
-                                <div class="col-md-6">
+                                <div class="col-md-7">
+                                    <input type="text" class="form-control" id="searchKeyword"
+                                        placeholder="输入书名或作者">
+                                </div>
+                                <div class="col-md-3">
                                     <select class="form-select" id="searchSource">
                                         <option value="">选择书源</option>
                                     </select>
                                 </div>
-                                <div class="col-md-6">
-                                    <div class="input-group">
-                                        <input type="text" class="form-control" id="searchKeyword"
-                                            placeholder="输入书名或作者">
-                                        <button class="btn btn-primary" onclick="searchBooks()">搜索</button>
-                                    </div>
-                                </div>
+                                <button class="col-md-2 btn btn-primary" onclick="searchBooks()">搜索</button>
                             </div>
                         </div>
 
                         <!-- URL导入 -->
-                        <div class="tab-pane fade" id="url-import" role="tabpanel">
+                        <div class="tab-pane fade show active" id="url-import" role="tabpanel">
                             <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <select class="form-select" id="urlSource">
-                                        <option value="">选择书源</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="input-group">
+                                <div class="row">
+                                    <div class="col-md-7">
                                         <input type="url" class="form-control" id="bookUrl" placeholder="粘贴书籍详情页URL"
                                             onpaste="handleUrlPaste(event)" oninput="validateBookUrl()">
-                                        <button class="btn btn-outline-secondary" onclick="pasteFromClipboard()"
-                                            title="从剪贴板粘贴">
-                                            <i class="bi bi-clipboard"></i>
-                                        </button>
-                                        <button class="btn btn-info" onclick="previewBookInfo()" title="预览书籍信息">
-                                            <i class="bi bi-eye"></i>
-                                        </button>
-                                        <button class="btn btn-success" onclick="importFromUrl()">导入</button>
                                     </div>
-                                    <div id="urlValidation" class="form-text"></div>
+                                    <div class="col-md-3">
+                                        <select class="form-select" id="urlSource">
+                                            <option value="">选择书源</option>
+                                        </select>
+                                    </div>
+                                    <button class="col-md-2 btn btn-success" onclick="importFromUrl()">导入</button>
                                 </div>
+                                <div id="urlValidation" class="form-text"></div>
                             </div>
 
                             <!-- URL导入说明 -->

@@ -192,7 +192,7 @@ async function searchBooks() {
                     </div>
                     <div class="col-2 d-flex align-items-center">
                         <button class="btn btn-primary btn-sm" 
-                                onclick="importBook(${sourceId}, '${book.source_url}')">
+                                onclick="importBook('${sourceId}', '${book.source_url}')">
                             <i class="bi bi-download"></i> 导入
                         </button>
                     </div>
@@ -223,11 +223,7 @@ async function importBook(sourceId, bookUrl) {
         if (response.ok) {
             const result = await response.json();
             showAlert(result.message, 'success');
-            
-            // 关闭搜索模态框
-            const modal = bootstrap.Modal.getInstance(document.getElementById('searchModal'));
-            modal.hide();
-            
+
             // 刷新书架
             if (typeof loadBooks === 'function') {
                 setTimeout(loadBooks, 2000); // 2秒后刷新，给导入一些时间
@@ -360,23 +356,23 @@ async function loadSourceList() {
                 <div class="d-flex justify-content-between align-items-start">
                     <div class="flex-grow-1">
                         <div class="d-flex align-items-center mb-1">
-                            <span class="source-status ${source.is_active ? 'active' : 'inactive'}"></span>
+                            <span class="source-status active"></span>
                             <strong>${source.name}</strong>
                         </div>
                         <div class="text-muted small">${source.url}</div>
                     </div>
                     <div class="source-actions">
                         <div class="btn-group btn-group-sm">
-                            <button class="btn btn-outline-primary" onclick="editSource(${source.id})" title="编辑">
+                            <button class="btn btn-outline-primary" onclick="editSource('${source.id}')" title="编辑">
                                 <i class="bi bi-pencil"></i>
                             </button>
-                            <button class="btn btn-outline-success" onclick="testSource(${source.id})" title="测试">
+                            <button class="btn btn-outline-success" onclick="testSource('${source.id}')" title="测试">
                                 <i class="bi bi-play"></i>
                             </button>
-                            <button class="btn btn-outline-warning" onclick="toggleSource(${source.id})" title="启用/禁用">
+                            <button class="btn btn-outline-warning" onclick="toggleSource('${source.id}')" title="启用/禁用">
                                 <i class="bi bi-power"></i>
                             </button>
-                            <button class="btn btn-outline-danger" onclick="deleteSource(${source.id})" title="删除">
+                            <button class="btn btn-outline-danger" onclick="deleteSource('${source.id}')" title="删除">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </div>
@@ -705,7 +701,7 @@ async function editSource(sourceId) {
             const saveBtn = document.querySelector('#addSourceForm button[onclick="saveBookSource()"]');
             if (saveBtn) {
                 saveBtn.textContent = '更新';
-                saveBtn.setAttribute('onclick', `updateBookSource(${sourceId})`);
+                saveBtn.setAttribute('onclick', `updateBookSource('${sourceId}')`);
             }
         }, 100);
         
@@ -798,6 +794,8 @@ async function toggleSource(sourceId) {
 
 // 删除书源
 async function deleteSource(sourceId) {
+    showAlert('删除暂未实现', 'danger');
+    return;
     if (!confirm('确定要删除这个书源吗？')) {
         return;
     }
@@ -954,7 +952,7 @@ async function importFromUrl() {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                source_id: parseInt(finalSourceId),
+                source_id: finalSourceId,
                 book_url: bookUrl
             })
         });
@@ -1020,7 +1018,7 @@ async function detectBookSource(url) {
                 return result.source_id;
             } else {
                 console.log('未找到匹配的书源');
-                return null;
+                return result.source_name;
             }
         } else {
             console.error('书源检测API调用失败');
