@@ -218,9 +218,6 @@
                         <div class="col-md-6">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h6>已有书源</h6>
-                                <button class="btn btn-success btn-sm" onclick="showAddSourceForm()">
-                                    <i class="bi bi-plus"></i> 添加书源
-                                </button>
                             </div>
                             <div id="sourceList" class="source-list">
                                 <!-- 书源列表将通过JavaScript加载 -->
@@ -229,76 +226,21 @@
 
                         <!-- 右侧：添加/编辑书源表单 -->
                         <div class="col-md-6">
-                            <div id="sourceForm" class="d-none">
-                                <h6>添加书源</h6>
-                                <form id="addSourceForm">
-                                    <div class="mb-3">
-                                        <label class="form-label">书源名称</label>
-                                        <input type="text" class="form-control" id="sourceName" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">网站首页</label>
-                                        <input type="url" class="form-control" id="sourceUrl" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">搜索URL</label>
-                                        <input type="text" class="form-control" id="searchUrl"
-                                            placeholder="使用 {keyword} 作为关键词占位符" required>
-                                        <small class="text-muted">例如: https://example.com/search?q={keyword}</small>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">书籍URL模式</label>
-                                        <input type="text" class="form-control" id="bookUrlPattern"
-                                            placeholder="书籍详情页URL模式">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">章节URL模式</label>
-                                        <input type="text" class="form-control" id="chapterUrlPattern"
-                                            placeholder="章节页面URL模式">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">内容选择器</label>
-                                        <input type="text" class="form-control" id="contentSelector"
-                                            placeholder="CSS选择器，用于提取章节内容">
-                                        <small class="text-muted">例如: .content, #chapter-content, .text</small>
-                                    </div>
-                                    <div class="d-flex gap-2">
-                                        <button type="button" class="btn btn-primary"
-                                            onclick="saveBookSource()">保存</button>
-                                        <button type="button" class="btn btn-secondary"
-                                            onclick="hideAddSourceForm()">取消</button>
-                                        <button type="button" class="btn btn-info"
-                                            onclick="testBookSource()">测试</button>
-                                    </div>
-                                </form>
-                            </div>
-
                             <!-- 预设书源 -->
                             <div id="presetSources">
-                                <h6>预设书源</h6>
-                                <p class="text-muted small">点击下方按钮快速添加常用书源</p>
-                                <div class="d-grid gap-2">
-                                    <button class="btn btn-outline-primary btn-sm" onclick="addPresetSource('biquge')">
-                                        笔趣阁 (示例)
-                                    </button>
-                                    <button class="btn btn-outline-primary btn-sm" onclick="addPresetSource('qidian')">
-                                        起点中文网 (示例)
-                                    </button>
-                                    <button class="btn btn-outline-primary btn-sm" onclick="addPresetSource('custom')">
-                                        自定义书源
-                                    </button>
-                                </div>
-
                                 <div class="mt-4">
                                     <h6>导入书源</h6>
-                                    <div class="mb-3">
+                                    <div>
                                         <label class="form-label">从JSON导入</label>
+                                        <button class="btn btn-outline-primary btn-sm" onclick="showSourceJsonExample()">
+                                            模板示例
+                                        </button>
                                         <textarea class="form-control" id="importJson" rows="4"
-                                            placeholder="粘贴书源JSON配置"></textarea>
+                                            placeholder="粘贴书源JSON配置" style="height: 350px;"></textarea>
                                         <button class="btn btn-success btn-sm mt-2"
                                             onclick="importFromJson()">导入</button>
                                     </div>
-                                    <div class="mb-3">
+                                    <div>
                                         <label class="form-label">从文件导入</label>
                                         <input type="file" class="form-control" id="importFile" accept=".json,.txt">
                                         <button class="btn btn-success btn-sm mt-2"

@@ -404,6 +404,53 @@ function hideAddSourceForm() {
     document.getElementById('presetSources').classList.remove('d-none');
 }
 
+function showSourceJsonExample() {
+    document.getElementById('importJson').value = `{
+        "name": "",
+        "show_name": "",
+        "url": "",
+        "encoding": "utf-8",
+        "domains": [
+        ],
+        "search": {
+            "url": "{keyword}",
+            "items": [],
+            "next": "",
+            "title": [],
+            "author": [],
+            "description": [],
+            "cover_img": [],
+            "cover_bg_img": [],
+        },
+        "chapter_list": {
+            "count_per_page": 0,
+            "list":[],
+            "items": [],
+            "pagers": {
+                "items": "",
+                "current": ""
+            },
+            "page_url": {
+                "skip_endding": "/",
+                "fmt": "{book_url}/index_{page}.html"
+            }
+        },
+        "book": {
+            "title": [],
+            "author": [],
+            "description": [],
+            "cover_img": [],
+            "cover_bg_img": [],
+        },
+        "content": {
+            "selector": "",
+            "remove_tags": [],
+            "remove_patterns": [],
+            "next": ""
+        }
+    }`;
+}
+
 // 保存书源
 async function saveBookSource() {
     const formData = {
@@ -420,14 +467,17 @@ async function saveBookSource() {
         showAlert('请填写必填字段', 'warning');
         return;
     }
-    
+    await updateBookSource(formData);
+}
+
+async function updateBookSource(sourceData) {
     try {
         const response = await fetch('/api/sources/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(formData)
+            body: JSON.stringify({name:sourceData.name, sourcejson: sourceData})
         });
         
         if (response.ok) {
@@ -570,40 +620,12 @@ function importFromJson() {
         const sourceData = JSON.parse(jsonText);
         
         // 验证JSON格式
-        if (!sourceData.name || !sourceData.search_url) {
+        if (!sourceData.name) {
             showAlert('JSON格式不正确，缺少必要字段', 'danger');
             return;
         }
         
-        // 先显示表单
-        showAddSourceForm();
-        
-        // 等待DOM更新后再填充数据
-        setTimeout(() => {
-            const sourceNameEl = document.getElementById('sourceName');
-            const sourceUrlEl = document.getElementById('sourceUrl');
-            const searchUrlEl = document.getElementById('searchUrl');
-            const bookUrlPatternEl = document.getElementById('bookUrlPattern');
-            const chapterUrlPatternEl = document.getElementById('chapterUrlPattern');
-            const contentSelectorEl = document.getElementById('contentSelector');
-            
-            console.log('JSON导入数据:', sourceData);
-            console.log('表单元素状态:', {
-                sourceNameEl: !!sourceNameEl,
-                sourceUrlEl: !!sourceUrlEl,
-                searchUrlEl: !!searchUrlEl
-            });
-            
-            if (sourceNameEl) sourceNameEl.value = sourceData.name || '';
-            if (sourceUrlEl) sourceUrlEl.value = sourceData.url || '';
-            if (searchUrlEl) searchUrlEl.value = sourceData.search_url || '';
-            if (bookUrlPatternEl) bookUrlPatternEl.value = sourceData.book_url_pattern || '';
-            if (chapterUrlPatternEl) chapterUrlPatternEl.value = sourceData.chapter_url_pattern || '';
-            if (contentSelectorEl) contentSelectorEl.value = sourceData.content_selector || '';
-            
-            showAlert('JSON导入成功，请检查并保存', 'success');
-        }, 100);
-        
+        updateBookSource(sourceData);
     } catch (error) {
         showAlert('JSON格式错误: ' + error.message, 'danger');
     }
@@ -635,35 +657,13 @@ function importFromFile() {
             // 如果是书源数组，导入第一个
             if (Array.isArray(sourceData)) {
                 sourceData = sourceData[0];
-                showAlert(`检测到${sourceData.length}个书源，将导入第一个`, 'info');
+                for (let i = 1; i < sourceData.length; i++) {
+                    updateBookSource(sourceData[i]);
+                }
+            } else {
+                updateBookSource(sourceData);
             }
-            
-            // 填充JSON文本框并导入
-            const importJsonEl = document.getElementById('importJson');
-            if (importJsonEl) {
-                importJsonEl.value = JSON.stringify(sourceData, null, 2);
-            }
-            
-            // 直接填充表单
-            showAddSourceForm();
-            setTimeout(() => {
-                const sourceNameEl = document.getElementById('sourceName');
-                const sourceUrlEl = document.getElementById('sourceUrl');
-                const searchUrlEl = document.getElementById('searchUrl');
-                const bookUrlPatternEl = document.getElementById('bookUrlPattern');
-                const chapterUrlPatternEl = document.getElementById('chapterUrlPattern');
-                const contentSelectorEl = document.getElementById('contentSelector');
-                
-                if (sourceNameEl) sourceNameEl.value = sourceData.name || '';
-                if (sourceUrlEl) sourceUrlEl.value = sourceData.url || '';
-                if (searchUrlEl) searchUrlEl.value = sourceData.search_url || '';
-                if (bookUrlPatternEl) bookUrlPatternEl.value = sourceData.book_url_pattern || '';
-                if (chapterUrlPatternEl) chapterUrlPatternEl.value = sourceData.chapter_url_pattern || '';
-                if (contentSelectorEl) contentSelectorEl.value = sourceData.content_selector || '';
-                
-                showAlert('文件导入成功，请检查并保存', 'success');
-            }, 100);
-            
+
         } catch (error) {
             showAlert('文件格式错误: ' + error.message, 'danger');
         }
@@ -712,45 +712,45 @@ async function editSource(sourceId) {
 }
 
 // 更新书源
-async function updateBookSource(sourceId) {
-    const formData = {
-        name: document.getElementById('sourceName').value,
-        url: document.getElementById('sourceUrl').value,
-        search_url: document.getElementById('searchUrl').value,
-        book_url_pattern: document.getElementById('bookUrlPattern').value,
-        chapter_url_pattern: document.getElementById('chapterUrlPattern').value,
-        content_selector: document.getElementById('contentSelector').value
-    };
+// async function updateBookSource(sourceId) {
+//     const formData = {
+//         name: document.getElementById('sourceName').value,
+//         url: document.getElementById('sourceUrl').value,
+//         search_url: document.getElementById('searchUrl').value,
+//         book_url_pattern: document.getElementById('bookUrlPattern').value,
+//         chapter_url_pattern: document.getElementById('chapterUrlPattern').value,
+//         content_selector: document.getElementById('contentSelector').value
+//     };
     
-    try {
-        const response = await fetch(`/api/sources/${sourceId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(formData)
-        });
+//     try {
+//         const response = await fetch(`/api/sources/${sourceId}`, {
+//             method: 'PUT',
+//             headers: {
+//                 'Content-Type': 'application/json'
+//             },
+//             body: JSON.stringify(formData)
+//         });
         
-        if (response.ok) {
-            showAlert('书源更新成功', 'success');
-            hideAddSourceForm();
-            loadSourceList();
+//         if (response.ok) {
+//             showAlert('书源更新成功', 'success');
+//             hideAddSourceForm();
+//             loadSourceList();
             
-            // 恢复保存按钮
-            const saveBtn = document.querySelector('#addSourceForm button[onclick^="updateBookSource"]');
-            if (saveBtn) {
-                saveBtn.textContent = '保存';
-                saveBtn.setAttribute('onclick', 'saveBookSource()');
-            }
-        } else {
-            const error = await response.json();
-            showAlert(error.detail || '更新失败', 'danger');
-        }
-    } catch (error) {
-        console.error('更新书源失败:', error);
-        showAlert('更新失败，请检查网络连接', 'danger');
-    }
-}
+//             // 恢复保存按钮
+//             const saveBtn = document.querySelector('#addSourceForm button[onclick^="updateBookSource"]');
+//             if (saveBtn) {
+//                 saveBtn.textContent = '保存';
+//                 saveBtn.setAttribute('onclick', 'saveBookSource()');
+//             }
+//         } else {
+//             const error = await response.json();
+//             showAlert(error.detail || '更新失败', 'danger');
+//         }
+//     } catch (error) {
+//         console.error('更新书源失败:', error);
+//         showAlert('更新失败，请检查网络连接', 'danger');
+//     }
+// }
 
 // 测试指定书源
 async function testSource(sourceId) {

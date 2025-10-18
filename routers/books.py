@@ -167,7 +167,7 @@ async def update_book_chapters(book_id: int, db: Session = Depends(get_db)):
                 db.add(new_chapter)
                 new_chapters.append(new_chapter)
 
-        book.total_chapters = len(chapters)
+        book.total_chapters = len(existing_chapter_numbers) + len(new_chapters)
         book.updated_at = datetime.utcnow()
 
         db.commit()

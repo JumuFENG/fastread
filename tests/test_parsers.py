@@ -6,8 +6,12 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import asyncio
-from parsers.parser_loader import get_parser_for_source, get_parser_for_url
-import requests
+from parsers.parser_loader import parser_loader, get_parser_for_source, get_parser_for_url
+
+async def test_network(url):
+    parser = parser_loader.create_base_parser({'name': 'test', 'url': url}, False)
+    bk = await parser.get_book_info(url)
+    print(bk.title, bk.author, bk.description, bk.cover_url)
 
 async def test_parsers():
     """测试解析器功能"""
@@ -177,9 +181,44 @@ async def test_luoxia():
     chapter_content = await parser.get_chapter_content(test_chapter_url)
     print(chapter_content)
 
-if __name__ == "__main__":
 
-    asyncio.run(test_luoxia())
+async def test_uaa():
+    parser = get_parser_for_source('uaa', {})
+    # test_book_url = 'https://canovel.com/article/1147'
+    # book_info = await parser.get_book_info(test_book_url)
+    # print(book_info)
+    # bchapters = await parser.get_chapter_list(test_book_url)
+    # print(len(bchapters))
+    test_chapter_url = 'https://yazhouse8.com/article/67851.html'
+    chapter_content = await parser.get_chapter_content(test_chapter_url)
+    print(chapter_content)
+
+async def test_dybz():
+    parser = get_parser_for_source('diyibanzhu')
+    # test_book_url = 'https://m.diyibanzhu5.online/list/8266.html'
+    # book_info = await parser.get_book_info(test_book_url)
+    # print(book_info)
+    # bchapters = await parser.get_chapter_list(test_book_url)
+    # print(len(bchapters))
+    test_chapter_url = 'https://m.diyibanzhu5.online/view/741511.html'
+    chapter_content = await parser.get_chapter_content(test_chapter_url)
+    print(chapter_content)
+
+async def test_qidiy():
+    parser = get_parser_for_source('qidiy')
+    # test_book_url = 'http://www.qidiy.com/book/104934/'
+    # book_info = await parser.get_book_info(test_book_url)
+    # print(book_info)
+    # bchapters = await parser.get_chapter_list(test_book_url)
+    # print(len(bchapters))
+    test_chapter_url = 'http://www.qidiy.com/book/104934/47845211.html'
+    chapter_content = await parser.get_chapter_content(test_chapter_url)
+    print(chapter_content)
+
+if __name__ == "__main__":
+    # asyncio.run(test_network('http://www.qidiy.com/book/104934/47845191.html'))
+    asyncio.run(test_qidiy())
+    # asyncio.run(test_dybz())
     # from urllib.parse import urlparse
     # next_sec = 'https://xszj.org/b/413589/c/5786882?page=2'
     # chapter_sec = 'https://xszj.org/b/413589/c/5786882'

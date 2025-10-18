@@ -105,6 +105,7 @@ class BaseBookSourceParser(ABC):
                 r'^\s*本章未完，请翻页.*$',  # 翻页提示
                 r'.*本小章还未完，请点击下一页.*',
                 r'.*这章没有结束，请点击下一页继续.*',
+                r'.*本章未完，请点击下一页继续.*',
                 r'.*（未完待续）.*',
                 r'^\s*未完待续.*$',  # 未完待续
                 r'^\s*点击进入.*$',  # 点击进入
@@ -295,7 +296,7 @@ class BaseBookSourceParser(ABC):
         Returns:
             新增章节信息列表
         """
-        if self.chapter_count_per_page <= 0:
+        if self.chapter_count_per_page <= 0 or not self.chapter_list_page_url_fmt:
             chapters = await self.get_chapter_list(book_url)
             return chapters[existing_chapter_count:]
 
@@ -336,8 +337,8 @@ class BaseBookSourceParser(ABC):
                     response.raise_for_status()
 
                     soup = BeautifulSoup(response.text, 'html.parser')
-                    content += await self.parse_chapter_content(soup)
                     chapter_sec = self.get_chapter_next_section(soup, chapter_url, chapter_sec)
+                    content += await self.parse_chapter_content(soup)
 
                 return content
 
@@ -752,8 +753,34 @@ class BaseBookSourceParser(ABC):
                 text = element.get_text()
                 paragraphs = [text.strip()] if text.strip() else []
 
+        joined_paragraphs = []
+        joined_text = ''
+        for para in paragraphs:
+            if not para:
+                continue
+            if para.startswith((
+                '作者：', '作者:', '字数：', '字数:', '第', '最新章节：', '最新章节:', '更新时间：', '更新时间:',
+                '1', '2', '3', '4', '5', '6', '7', '8', '9', '0')):
+                if joined_text:
+                    joined_paragraphs.append(joined_text.strip())
+                    joined_text = ''
+                joined_paragraphs.append(para)
+            else:
+                # 检查段落是否以标点符号结束
+                if para.endswith(('。', '！', '？', '.', '!', '?', '；', ';', '…', '”', ']', ')', '}', '】', '｝', '」')):
+                    if joined_text:
+                        joined_text += para
+                        joined_paragraphs.append(joined_text.strip())
+                        joined_text = ''
+                    else:
+                        joined_paragraphs.append(para)
+                else:
+                    joined_text += para
+
+        if joined_text:
+            joined_paragraphs.append(joined_text.strip())
         # 用双换行符连接段落
-        return '\n\n'.join(paragraphs)
+        return '\n\n'.join(joined_paragraphs)
 
     def clean_content(self, text: str) -> str:
         """清理章节内容"""
@@ -764,8 +791,8 @@ class BaseBookSourceParser(ABC):
             text = re.sub(pattern, '', text, flags=re.IGNORECASE)
 
         # 清理多余的空白
-        text = re.sub(r'\n\s*\n', '\n\n', text)  # 保留段落分隔
-        text = re.sub(r'[ \t]+', ' ', text)  # 合并空格和制表符
+        text = re.sub(r'\n\s*\n', '\n\n', text)
+        text = re.sub(r'[ \t]+', ' ', text)
         text = text.strip()
 
         return text

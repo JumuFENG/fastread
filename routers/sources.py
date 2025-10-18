@@ -20,7 +20,7 @@ def parser_to_booksource(parser: BaseBookSourceParser) -> BookSourceResponse:
 
 class BookSourceCreate(BaseModel):
     name: str
-    sourcejson: str
+    sourcejson: dict
 
 class SearchResult(BaseModel):
     title: str
@@ -48,9 +48,7 @@ async def get_book_sources():
 
 @router.post("/", response_model=BookSourceResponse)
 async def create_book_source(source: BookSourceCreate):
-    name = source.name
-    sourcejson = json.loads(source.sourcejson)
-    parser = get_parser_for_source(name, sourcejson)
+    parser = get_parser_for_source(source.name, source.sourcejson)
     return parser_to_booksource(parser)
 
 @router.get("/{source_id}/search")

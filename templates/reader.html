@@ -370,20 +370,10 @@
 
             // 处理章节内容
             let content = chapterData.content || '章节内容为空';
+            currentBook.currentChapterData = chapterData;
 
             // 应用敏感词过滤
-            content = applySensitiveWordFilter(content);
-
-            // 将换行符转换为段落
-            const paragraphs = content.split('\n\n').filter(p => p.trim().length > 0);
-            const formattedContent = paragraphs.map(p => `<p>${p.trim()}</p>`).join('');
-
-            contentDiv.innerHTML = `
-            <div class="chapter-text">
-                ${formattedContent}<p></p>
-            </div>
-            ${!chapterData.is_cached ? '<div class="text-muted small mt-3"><i class="bi bi-cloud-download"></i> 实时获取</div>' : ''}
-        `;
+            applySensitiveWordFilter(chapterData);
 
             // 更新章节列表
             updateChapterList();
@@ -624,6 +614,7 @@
         const panel = document.getElementById('sensitiveWordsPanel');
         panel.classList.toggle('d-none');
         loadSensitiveWords();
+        applySensitiveWordFilter(currentBook.currentChapterData);
     }
 
     function hideAllPanels() {
@@ -685,18 +676,29 @@
     }
 
     // 敏感词过滤功能
-    function applySensitiveWordFilter(content) {
-        if (!sensitiveWords[currentBook.id]) {
-            return content;
+    function applySensitiveWordFilter(chapterData) {
+        let filteredContent = chapterData.content;
+        if (sensitiveWords[currentBook.id]) {
+            sensitiveWords[currentBook.id].forEach(wordPair => {
+                if (!wordPair.enabled) {
+                    return;
+                }
+                const regex = new RegExp(wordPair.original, 'gi');
+                filteredContent = filteredContent.replace(regex, wordPair.replacement);
+            });
         }
-        let filteredContent = content;
-        sensitiveWords[currentBook.id].forEach(wordPair => {
-            if (!wordPair.enabled) {
-                return;
-            }
-            const regex = new RegExp(wordPair.original, 'gi');
-            filteredContent = filteredContent.replace(regex, wordPair.replacement);
-        });
+
+        // 将换行符转换为段落
+        const paragraphs = filteredContent.split('\n\n').filter(p => p.trim().length > 0);
+        const formattedContent = paragraphs.map(p => `<p>${p.trim()}</p>`).join('');
+
+        const contentDiv = document.getElementById('chapterContent');
+        contentDiv.innerHTML = `
+            <div class="chapter-text">
+                ${formattedContent}<p></p>
+            </div>
+            ${!chapterData.is_cached ? '<div class="text-muted small mt-3"><i class="bi bi-cloud-download"></i> 实时获取</div>' : ''}
+        `;
         return filteredContent;
     }
 
@@ -732,12 +734,14 @@
 
         loadSensitiveWords();
         showAlert('敏感词添加成功', 'success');
+        applySensitiveWordFilter(currentBook.currentChapterData);
     }
 
     function toggleSensitiveWord(index) {
-        sensitiveWords[index].enabled = !sensitiveWords[index].enabled;
+        sensitiveWords[currentBook.id][index].enabled = !sensitiveWords[currentBook.id][index].enabled;
         localStorage.setItem('sensitiveWords', JSON.stringify(sensitiveWords));
         loadSensitiveWords();
+        applySensitiveWordFilter(currentBook.currentChapterData);
     }
 
     function removeSensitiveWord(index) {
@@ -749,6 +753,7 @@
         localStorage.setItem('sensitiveWords', JSON.stringify(sensitiveWords));
         loadSensitiveWords();
         showAlert('敏感词删除成功', 'success');
+        applySensitiveWordFilter(currentBook.currentChapterData);
     }
 
     function loadSensitiveWords() {
@@ -761,7 +766,7 @@
         const html = sensitiveWords[currentBook.id].map((wordPair, index) => `
             <div class="sensitive-word-item">
                 <div class="word-pair">
-                    <input class="form-check-input" type="checkbox" checked="${wordPair.enabled}" onchange="toggleSensitiveWord(${index})">
+                    <input class="form-check-input" type="checkbox" ${wordPair.enabled? 'checked' : ''} onchange="toggleSensitiveWord(${index})">
                     <span class="original-word">${wordPair.original}</span>
                     <span>→</span>
                     <span class="replacement-word">${wordPair.replacement}</span>
