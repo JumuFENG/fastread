@@ -76,6 +76,53 @@ class ReadingProgress(Base):
     reading_position = Column(Integer, default=0)
     last_read_at = Column(DateTime, default=datetime.utcnow)
 
+class Excerpt(Base):
+    __tablename__ = "excerpts"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    book_id = Column(Integer, ForeignKey("books.id"))
+    chapter_id = Column(Integer, ForeignKey("chapters.id"))
+    content = Column(Text)
+    note = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    user = relationship("User")
+    book = relationship("Book")
+    chapter = relationship("Chapter")
+
+class Template(Base):
+    __tablename__ = "templates"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    name = Column(String, index=True)
+    content = Column(Text)
+    keywords = Column(Text)  # JSON格式存储关键词列表
+    tags = Column(Text)  # JSON格式存储标签列表
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+    
+    user = relationship("User")
+
+class Rewrite(Base):
+    __tablename__ = "rewrites"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    book_id = Column(Integer, ForeignKey("books.id"))
+    chapter_id = Column(Integer, ForeignKey("chapters.id"))
+    original_content = Column(Text)
+    rewritten_content = Column(Text)
+    position = Column(Integer)  # 在章节中的位置
+    type = Column(String)  # 'rewrite' 或 'insert'
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    user = relationship("User")
+    book = relationship("Book")
+    chapter = relationship("Chapter")
+
 def get_db():
     db = SessionLocal()
     try:

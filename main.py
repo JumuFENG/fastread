@@ -4,7 +4,8 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 import uvicorn
 from database import engine, Base
-from routers import books, reading, sources, auth
+from routers import books, reading, sources, auth, excerpts, rewrites
+from routers import templates as rtemplates
 
 # 创建数据库表
 Base.metadata.create_all(bind=engine)
@@ -22,6 +23,9 @@ app.include_router(auth.router, prefix="/api/auth", tags=["认证"])
 app.include_router(books.router, prefix="/api/books", tags=["书籍管理"])
 app.include_router(reading.router, prefix="/api/reading", tags=["阅读"])
 app.include_router(sources.router, prefix="/api/sources", tags=["书源管理"])
+app.include_router(excerpts.router, prefix="/api/excerpts", tags=["摘录管理"])
+app.include_router(rtemplates.router, prefix="/api/templates", tags=["模板管理"])
+app.include_router(rewrites.router, prefix="/api/rewrites", tags=["重写功能"])
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):

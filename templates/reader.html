@@ -14,6 +14,12 @@
     <button class="btn btn-outline-success btn-sm" onclick="toggleExcerpts()" title="摘录管理">
         <i class="bi bi-bookmark"></i>
     </button>
+    <button class="btn btn-outline-info btn-sm" onclick="toggleTemplates()" title="模板管理">
+        <i class="bi bi-file-text"></i>
+    </button>
+    <button class="btn btn-outline-primary btn-sm" onclick="toggleRewrite()" title="重写/创作">
+        <i class="bi bi-pencil-square"></i>
+    </button>
     <button class="btn btn-outline-warning btn-sm" onclick="toggleSensitiveWords()" title="敏感词替换">
         <i class="bi bi-shield-check"></i>
     </button>
@@ -58,6 +64,7 @@
             <div id="settingsPanel" class="floating-panel d-none">
                 <div class="panel-header">
                     <h6>阅读设置</h6>
+                    <button type="button" class="btn-close" onclick="hideAllPanels()" aria-label="关闭"></button>
                 </div>
                 <div class="panel-body">
                     <div class="row">
@@ -96,12 +103,13 @@
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <input type="checkbox" class="form-check-input" id="autoScrollCheckbox"
-                                onchange="toggleAutoScroll()">
-                            <label class="form-check-label" for="autoScrollCheckbox">自动滚动</label>
+                            <label class="form-check-label">
+                                <input type="checkbox" class="form-check-input" id="autoScrollCheckbox"
+                                    onchange="toggleAutoScroll()">
+                                自动滚动</label>
                             <input type="number" class="form-control form-control-sm" id="autoScrollSpeed"
                                 placeholder="滚动速度 (ms)" value="10" min="20"
-                                style="width: 50px; display: inline-block; margin-left: 10px;"
+                                style="width: 70px; display: inline-block; margin-left: 10px;"
                                 onchange="updateAutoScrollSpeed()">
                         </div>
                     </div>
@@ -112,14 +120,18 @@
             <div id="excerptsPanel" class="floating-panel d-none">
                 <div class="panel-header">
                     <h6>摘录管理</h6>
+                    <button type="button" class="btn-close" onclick="hideAllPanels()" aria-label="关闭"></button>
                 </div>
                 <div class="panel-body">
                     <div class="mb-3">
                         <button class="btn btn-primary btn-sm" onclick="saveSelectedText()">
                             <i class="bi bi-plus"></i> 保存选中文本
                         </button>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="clearExcerpts()">
-                            <i class="bi bi-trash"></i> 清空摘录
+                        <button class="btn btn-outline-secondary btn-sm" onclick="loadServerExcerpts()">
+                            <i class="bi bi-cloud-download"></i> 加载服务器摘录
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="clearExcerpts()">
+                            <i class="bi bi-trash"></i> 清空本地摘录
                         </button>
                     </div>
                     <div id="excerptsList" class="excerpts-list">
@@ -128,10 +140,127 @@
                 </div>
             </div>
 
+            <!-- 模板管理面板 -->
+            <div id="templatesPanel" class="floating-panel d-none">
+                <div class="panel-header">
+                    <h6>模板管理</h6>
+                    <button type="button" class="btn-close" onclick="hideAllPanels()" aria-label="关闭"></button>
+                </div>
+                <div class="panel-body">
+                    <div class="mb-3">
+                        <button class="btn btn-primary btn-sm" onclick="createTemplateFromSelection()">
+                            <i class="bi bi-plus"></i> 从选中文本创建模板
+                        </button>
+                        <button class="btn btn-outline-info btn-sm" onclick="loadUserTemplates()">
+                            <i class="bi bi-list"></i> 我的模板
+                        </button>
+                    </div>
+
+                    <!-- 创建模板表单 -->
+                    <div id="createTemplateForm" class="d-none">
+                        <div class="mb-3">
+                            <label class="form-label">模板名称</label>
+                            <input type="text" class="form-control" id="templateName" placeholder="输入模板名称">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">模板内容</label>
+                            <textarea class="form-control" id="templateContent" rows="4" placeholder="模板内容"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">关键词设置</label>
+                            <div id="keywordsList"></div>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="extractKeywords()">
+                                <i class="bi bi-search"></i> 自动提取关键词
+                            </button>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">标签</label>
+                            <input type="text" class="form-control" id="templateTags" placeholder="输入标签，用逗号分隔">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">描述</label>
+                            <textarea class="form-control" id="templateDescription" rows="2"
+                                placeholder="模板描述"></textarea>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-success btn-sm" onclick="saveTemplate()">
+                                <i class="bi bi-save"></i> 保存模板
+                            </button>
+                            <button class="btn btn-secondary btn-sm" onclick="cancelCreateTemplate()">
+                                取消
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 模板列表 -->
+                    <div id="templatesList">
+                        <!-- 模板列表 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 重写/创作面板 -->
+            <div id="rewritePanel" class="floating-panel d-none">
+                <div class="panel-header">
+                    <h6>重写/创作</h6>
+                    <button type="button" class="btn-close" onclick="hideAllPanels()" aria-label="关闭"></button>
+                </div>
+                <div class="panel-body">
+                    <div class="mb-3">
+                        <button class="btn btn-primary btn-sm" onclick="startRewrite()">
+                            <i class="bi bi-pencil"></i> 重写选中内容
+                        </button>
+                        <button class="btn btn-outline-primary btn-sm" onclick="startInsert()">
+                            <i class="bi bi-plus-circle"></i> 插入新内容
+                        </button>
+                        <button class="btn btn-outline-info btn-sm" onclick="loadUserRewrites()">
+                            <i class="bi bi-list"></i> 我的重写
+                        </button>
+                    </div>
+
+                    <!-- 重写表单 -->
+                    <div id="rewriteForm" class="d-none">
+                        <div class="mb-3">
+                            <label class="form-label">原始内容</label>
+                            <textarea class="form-control" id="originalContent" rows="3" readonly></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">重写内容</label>
+                            <textarea class="form-control" id="rewrittenContent" rows="4"
+                                placeholder="输入重写后的内容"></textarea>
+                        </div>
+                        <div class="mb-3" id="templateSelector" style="display: none;">
+                            <label class="form-label">应用模板</label>
+                            <select class="form-select" id="templateSelect">
+                                <option value="">选择模板</option>
+                            </select>
+                            <button type="button" class="btn btn-outline-info btn-sm mt-2"
+                                onclick="applySelectedTemplate()">
+                                应用模板
+                            </button>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-success btn-sm" onclick="saveRewrite()">
+                                <i class="bi bi-save"></i> 保存重写
+                            </button>
+                            <button class="btn btn-secondary btn-sm" onclick="cancelRewrite()">
+                                取消
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 重写列表 -->
+                    <div id="rewritesList">
+                        <!-- 重写列表 -->
+                    </div>
+                </div>
+            </div>
+
             <!-- 敏感词替换面板 -->
             <div id="sensitiveWordsPanel" class="floating-panel d-none">
                 <div class="panel-header">
                     <h6>敏感词替换</h6>
+                    <button type="button" class="btn-close" onclick="hideAllPanels()" aria-label="关闭"></button>
                 </div>
                 <div class="panel-body">
                     <div id="sensitiveWordsList" class="sensitive-words-list">
@@ -260,6 +389,23 @@
             prevChapter();
         } else if (e.key === 'ArrowRight') {
             nextChapter();
+        } else if (e.key === 'Escape') {
+            // ESC键关闭所有面板
+            hideAllPanels();
+        }
+    });
+
+    // 窗口大小变化监听
+    window.addEventListener('resize', function () {
+        const isMobile = window.innerWidth <= 768;
+        const settingsPanel = document.getElementById('settingsPanel');
+
+        if (!settingsPanel.classList.contains('d-none')) {
+            if (isMobile) {
+                document.body.classList.add('mobile-settings-active');
+            } else {
+                document.body.classList.remove('mobile-settings-active');
+            }
         }
     });
 });
@@ -616,13 +762,31 @@
         hideAllPanels();
         const panel = document.getElementById('settingsPanel');
         panel.classList.toggle('d-none');
+
+        // 检查是否为移动端
+        const isMobile = window.innerWidth <= 768;
+
         if (!panel.classList.contains('d-none')) {
             if (autoScrollTimer) {
                 stopAutoScroll();
             }
+
+            // 移动端特殊处理
+            if (isMobile) {
+                document.body.classList.add('mobile-settings-active');
+                // 滚动到设置面板
+                setTimeout(() => {
+                    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+            }
         } else {
             if (autoScrollEnabled) {
                 startAutoScroll();
+            }
+
+            // 移除移动端特殊样式
+            if (isMobile) {
+                document.body.classList.remove('mobile-settings-active');
             }
         }
     }
@@ -632,6 +796,37 @@
         const panel = document.getElementById('excerptsPanel');
         panel.classList.toggle('d-none');
         loadExcerpts();
+    }
+
+    function toggleTemplates() {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            showAlert('模板功能需要登录后使用', 'warning');
+            return;
+        }
+
+        hideAllPanels();
+        const panel = document.getElementById('templatesPanel');
+        panel.classList.toggle('d-none');
+        if (!panel.classList.contains('d-none')) {
+            loadUserTemplates();
+        }
+    }
+
+    function toggleRewrite() {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            showAlert('重写功能需要登录后使用', 'warning');
+            return;
+        }
+
+        hideAllPanels();
+        const panel = document.getElementById('rewritePanel');
+        panel.classList.toggle('d-none');
+        if (!panel.classList.contains('d-none')) {
+            loadUserRewrites();
+            loadTemplatesForRewrite();
+        }
     }
 
     function toggleSensitiveWords() {
@@ -645,7 +840,17 @@
     function hideAllPanels() {
         document.getElementById('settingsPanel').classList.add('d-none');
         document.getElementById('excerptsPanel').classList.add('d-none');
+        document.getElementById('templatesPanel').classList.add('d-none');
+        document.getElementById('rewritePanel').classList.add('d-none');
         document.getElementById('sensitiveWordsPanel').classList.add('d-none');
+
+        // 移除移动端特殊样式
+        document.body.classList.remove('mobile-settings-active');
+
+        // 恢复自动滚动
+        if (autoScrollEnabled) {
+            startAutoScroll();
+        }
     }
 
     // 阅读设置功能
@@ -807,10 +1012,15 @@
 
     // 摘录功能
     function addTextSelectionListener() {
-        document.addEventListener('mouseup', function () {
+        document.addEventListener('mouseup', function (e) {
+            if (e.target.closest('.selection-tooltip')) {
+                return;
+            }
             const selection = window.getSelection();
-            if (selection.toString().trim().length > 0) {
-                showSelectionTooltip(selection);
+            if (selection.rangeCount > 0 && selection.toString().trim().length > 0) {
+                Promise.resolve().then(() => {
+                    showSelectionTooltip(selection);
+                });
             }
         });
     }
@@ -823,39 +1033,86 @@
         }
 
         const selectedText = selection.toString().trim();
-        if (selectedText.length < 5) return; // 太短的文本不显示工具提示
+        if (selectedText.length < 1) return; // 太短的文本不显示工具提示
 
         const range = selection.getRangeAt(0);
         const rect = range.getBoundingClientRect();
 
         const tooltip = document.createElement('div');
         tooltip.className = 'selection-tooltip';
-        tooltip.innerHTML = `
-            <button class="btn btn-primary btn-sm" onclick="saveExcerpt('${selectedText.replace(/'/g, "\\'")}')">
-                <i class="bi bi-bookmark-plus"></i> 保存摘录
-            </button>
-        `;
+
+        // 计算工具提示位置，确保不超出屏幕边界
+        let top = rect.top - 45;
+        let left = rect.left;
+
+        if (top < 10) {
+            top = rect.bottom + 5;
+        }
+
+        if (left + 200 > window.innerWidth) {
+            left = window.innerWidth - 210;
+        }
+
+        if (left < 10) {
+            left = 10;
+        }
 
         tooltip.style.cssText = `
             position: fixed;
-            top: ${rect.top - 40}px;
-            left: ${rect.left}px;
+            top: ${top}px;
+            left: ${left}px;
             z-index: 10000;
-            background: white;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            padding: 4px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         `;
 
+        tooltip.innerHTML = `
+            <button class="btn border-0 bg-transparent text-success p-1" title="保存摘录" onclick="saveExcerpt('${selectedText}')">
+                <i class="bi bi-bookmark-plus"></i>
+            </button>
+            <button class="btn border-0 bg-transparent text-info p-1" title="保存为模板" onclick="tooltipTemplateClicked(event, '${selectedText}')">
+                <i class="bi bi-file-text"></i>
+            </button>
+            <button class="btn border-0 bg-transparent text-primary p-1" title="重写" onclick="tooltipRewriteClicked(event, '${selectedText}')" >
+                <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn border-0 bg-transparent text-warning p-1" title="替换敏感词"  onclick="tooltipSensitiveClicked(event, '${selectedText}')">
+                <i class="bi bi-shield-check"></i>
+            </button>
+        `
+
+        // 添加到DOM
         document.body.appendChild(tooltip);
 
-        // 3秒后自动移除
-        setTimeout(() => {
-            if (tooltip.parentElement) {
-                tooltip.remove();
+        // 使用setInterval检查文本选择状态的自动移除逻辑
+        tooltip.autoRemoveTimer = setInterval(() => {
+            const currentSelection = window.getSelection().toString().trim();
+            if (!currentSelection) {
+                // 没有文本被选中时移除工具提示
+                if (tooltip.parentElement) {
+                    tooltip.remove();
+                }
+                clearInterval(tooltip.autoRemoveTimer);
             }
-        }, 3000);
+        }, 1000);
+
+        // 鼠标悬停时暂停自动移除检查
+        tooltip.addEventListener('mouseenter', function () {
+            if (tooltip.autoRemoveTimer) {
+                clearInterval(tooltip.autoRemoveTimer);
+            }
+        });
+
+        tooltip.addEventListener('mouseleave', function () {
+            // 鼠标离开后重新开始检查
+            tooltip.autoRemoveTimer = setInterval(() => {
+                const currentSelection = window.getSelection().toString().trim();
+                if (!currentSelection) {
+                    if (tooltip.parentElement) {
+                        tooltip.remove();
+                    }
+                    clearInterval(tooltip.autoRemoveTimer);
+                }
+            }, 1000);
+        });
     }
 
     function saveSelectedText() {
@@ -870,18 +1127,53 @@
         saveExcerpt(selectedText);
     }
 
-    function saveExcerpt(text) {
-        const excerpt = {
-            id: Date.now(),
-            text: text,
-            chapter: chapters[currentChapterIndex]?.title || '未知章节',
-            chapterNumber: chapters[currentChapterIndex]?.chapter_number || 0,
-            bookTitle: currentBook?.title || '未知书籍',
-            timestamp: new Date().toLocaleString()
-        };
+    async function saveExcerpt(text) {
+        const token = localStorage.getItem('token');
 
-        excerpts.unshift(excerpt); // 添加到开头
-        localStorage.setItem('excerpts', JSON.stringify(excerpts));
+        if (!token) {
+            // 未登录用户保存到本地
+            const excerpt = {
+                id: Date.now(),
+                text: text,
+                chapter: chapters[currentChapterIndex]?.title || '未知章节',
+                chapterNumber: chapters[currentChapterIndex]?.chapter_number || 0,
+                bookTitle: currentBook?.title || '未知书籍',
+                timestamp: new Date().toLocaleString(),
+                local: true
+            };
+
+            excerpts.unshift(excerpt);
+            localStorage.setItem('excerpts', JSON.stringify(excerpts));
+            showAlert('摘录已保存到本地', 'success');
+        } else {
+            // 登录用户保存到服务器
+            try {
+                const response = await fetch('/api/excerpts/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        book_id: currentBook.id,
+                        chapter_id: chapters[currentChapterIndex].id,
+                        content: text,
+                        note: ''
+                    })
+                });
+
+                if (response.ok) {
+                    showAlert('摘录保存成功', 'success');
+                } else {
+                    throw new Error('保存失败');
+                }
+            } catch (error) {
+                console.error('保存摘录失败:', error);
+                showAlert('保存摘录失败，已保存到本地', 'warning');
+                // 失败时保存到本地
+                saveExcerptLocally(text);
+            }
+        }
 
         // 移除选择工具提示
         const tooltip = document.querySelector('.selection-tooltip');
@@ -891,8 +1183,6 @@
 
         // 清除选择
         window.getSelection().removeAllRanges();
-
-        showAlert('摘录保存成功', 'success');
 
         // 如果摘录面板打开，刷新列表
         if (!document.getElementById('excerptsPanel').classList.contains('d-none')) {
@@ -1047,7 +1337,7 @@
 
     // 点击外部关闭面板
     document.addEventListener('click', function (e) {
-        const panels = ['settingsPanel', 'excerptsPanel', 'sensitiveWordsPanel'];
+        const panels = ['settingsPanel', 'excerptsPanel', 'templatesPanel', 'rewritePanel', 'sensitiveWordsPanel'];
         const toolbar = document.querySelector('.reader-toolbar');
 
         if (!toolbar.contains(e.target)) {
@@ -1068,5 +1358,798 @@
     window.addEventListener('beforeunload', function () {
         saveReadingProgress(true);
     });
+
+    // ==================== 摘录功能 ====================
+
+    async function saveSelectedText() {
+        const selection = window.getSelection();
+        const selectedText = selection.toString().trim();
+
+        if (!selectedText) {
+            showAlert('请先选择要摘录的文本', 'warning');
+            return;
+        }
+
+        const token = localStorage.getItem('token');
+        if (!token) {
+            // 保存到本地
+            saveExcerptLocally(selectedText);
+            return;
+        }
+
+        // 保存到服务器
+        try {
+            const response = await fetch('/api/excerpts/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    book_id: currentBook.id,
+                    chapter_id: chapters[currentChapterIndex].id,
+                    content: selectedText,
+                    note: ''
+                })
+            });
+
+            if (response.ok) {
+                showAlert('摘录保存成功', 'success');
+                loadExcerpts();
+                selection.removeAllRanges();
+            } else {
+                throw new Error('保存失败');
+            }
+        } catch (error) {
+            console.error('保存摘录失败:', error);
+            showAlert('保存摘录失败，已保存到本地', 'warning');
+            saveExcerptLocally(selectedText);
+        }
+    }
+
+    function saveExcerptLocally(text) {
+        const excerpt = {
+            id: Date.now(),
+            book_id: currentBook.id,
+            chapter_id: chapters[currentChapterIndex].id,
+            content: text,
+            note: '',
+            created_at: new Date().toISOString(),
+            local: true
+        };
+
+        excerpts.push(excerpt);
+        localStorage.setItem('excerpts', JSON.stringify(excerpts));
+        loadExcerpts();
+        showAlert('摘录已保存到本地', 'success');
+    }
+
+    async function loadServerExcerpts() {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            showAlert('请先登录', 'warning');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/excerpts/?book_id=${currentBook.id}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const serverExcerpts = await response.json();
+                displayExcerpts([...excerpts, ...serverExcerpts]);
+                showAlert(`加载了 ${serverExcerpts.length} 条服务器摘录`, 'success');
+            }
+        } catch (error) {
+            console.error('加载服务器摘录失败:', error);
+            showAlert('加载服务器摘录失败', 'danger');
+        }
+    }
+
+    function loadExcerpts() {
+        displayExcerpts(excerpts);
+    }
+
+    function displayExcerpts(excerptList) {
+        const container = document.getElementById('excerptsList');
+
+        if (excerptList.length === 0) {
+            container.innerHTML = '<div class="text-center text-muted">暂无摘录</div>';
+            return;
+        }
+
+        container.innerHTML = excerptList.map(excerpt => `
+            <div class="excerpt-item mb-2 p-2 border rounded">
+                <div class="excerpt-content">${excerpt.content}</div>
+                <div class="excerpt-meta text-muted small mt-1">
+                    ${new Date(excerpt.created_at).toLocaleString()}
+                    ${excerpt.local ? '<span class="badge bg-secondary">本地</span>' : '<span class="badge bg-primary">服务器</span>'}
+                </div>
+                <div class="excerpt-actions mt-1">
+                    <button class="btn btn-outline-danger btn-sm" onclick="deleteExcerpt(${excerpt.id}, ${excerpt.local || false})">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    async function deleteExcerpt(excerptId, isLocal) {
+        if (isLocal) {
+            excerpts = excerpts.filter(e => e.id !== excerptId);
+            localStorage.setItem('excerpts', JSON.stringify(excerpts));
+            loadExcerpts();
+            showAlert('本地摘录删除成功', 'success');
+            return;
+        }
+
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        try {
+            const response = await fetch(`/api/excerpts/${excerptId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                showAlert('摘录删除成功', 'success');
+                loadServerExcerpts();
+            }
+        } catch (error) {
+            console.error('删除摘录失败:', error);
+            showAlert('删除摘录失败', 'danger');
+        }
+    }
+
+    // ==================== 模板功能 ====================
+
+    let currentSelectedText = '';
+    let currentKeywords = [];
+
+    function createTemplateFromSelection() {
+        const selection = window.getSelection();
+        const selectedText = selection.toString().trim();
+
+        if (!selectedText) {
+            showAlert('请先选择要创建模板的文本', 'warning');
+            return;
+        }
+
+        currentSelectedText = selectedText;
+        document.getElementById('templateContent').value = selectedText;
+        document.getElementById('createTemplateForm').classList.remove('d-none');
+
+        // 自动提取关键词
+        extractKeywords();
+    }
+
+    async function extractKeywords() {
+        const content = document.getElementById('templateContent').value.trim();
+        if (!content) return;
+
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        try {
+            const response = await fetch('/api/templates/extract-keywords', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(content)
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                displayKeywordsList(result.suggested_keywords);
+            }
+        } catch (error) {
+            console.error('提取关键词失败:', error);
+        }
+    }
+
+    function displayKeywordsList(suggestedKeywords) {
+        const container = document.getElementById('keywordsList');
+        currentKeywords = [];
+
+        let html = '<div class="mb-2"><small class="text-muted">点击下方关键词来设置模板变量：</small></div>';
+
+        Object.entries(suggestedKeywords).forEach(([key, value]) => {
+            html += `
+                <div class="d-flex align-items-center mb-2">
+                    <input type="checkbox" class="form-check-input me-2" id="keyword_${key}" 
+                           onchange="toggleKeyword('${key}', '${value}')">
+                    <label class="form-check-label me-2" for="keyword_${key}">${key}:</label>
+                    <span class="text-primary">${value}</span>
+                </div>
+            `;
+        });
+
+        html += `
+            <div class="mt-2">
+                <button type="button" class="btn btn-outline-primary btn-sm" onclick="addCustomKeyword()">
+                    <i class="bi bi-plus"></i> 添加自定义关键词
+                </button>
+            </div>
+        `;
+
+        container.innerHTML = html;
+    }
+
+    function toggleKeyword(key, value) {
+        const checkbox = document.getElementById(`keyword_${key}`);
+        const content = document.getElementById('templateContent');
+
+        if (checkbox.checked) {
+            // 添加关键词
+            if (!currentKeywords.includes(key)) {
+                currentKeywords.push(key);
+            }
+            // 替换内容中的文本为模板变量
+            content.value = content.value.replace(new RegExp(value, 'g'), `{${key}}`);
+        } else {
+            // 移除关键词
+            currentKeywords = currentKeywords.filter(k => k !== key);
+            // 恢复原文本
+            content.value = content.value.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
+        }
+    }
+
+    function addCustomKeyword() {
+        const key = prompt('请输入关键词名称（如：man1, place1等）：');
+        if (!key) return;
+
+        const value = prompt('请输入要替换的文本：');
+        if (!value) return;
+
+        const content = document.getElementById('templateContent');
+        if (content.value.includes(value)) {
+            currentKeywords.push(key);
+            content.value = content.value.replace(new RegExp(value, 'g'), `{${key}}`);
+
+            // 更新显示
+            const container = document.getElementById('keywordsList');
+            container.innerHTML += `
+                <div class="d-flex align-items-center mb-2">
+                    <input type="checkbox" class="form-check-input me-2" checked 
+                           onchange="toggleKeyword('${key}', '${value}')">
+                    <label class="form-check-label me-2">${key}:</label>
+                    <span class="text-primary">${value}</span>
+                </div>
+            `;
+        } else {
+            showAlert('在模板内容中未找到指定文本', 'warning');
+        }
+    }
+
+    async function saveTemplate() {
+        const name = document.getElementById('templateName').value.trim();
+        const content = document.getElementById('templateContent').value.trim();
+        const tags = document.getElementById('templateTags').value.trim().split(',').map(t => t.trim()).filter(t => t);
+        const description = document.getElementById('templateDescription').value.trim();
+
+        if (!name || !content) {
+            showAlert('请填写模板名称和内容', 'warning');
+            return;
+        }
+
+        if (currentKeywords.length === 0) {
+            showAlert('请至少设置一个关键词', 'warning');
+            return;
+        }
+
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        try {
+            const response = await fetch('/api/templates/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    name: name,
+                    content: content,
+                    keywords: currentKeywords,
+                    tags: tags,
+                    description: description
+                })
+            });
+
+            if (response.ok) {
+                showAlert('模板保存成功', 'success');
+                cancelCreateTemplate();
+                loadUserTemplates();
+            } else {
+                const error = await response.json();
+                showAlert(error.detail || '保存模板失败', 'danger');
+            }
+        } catch (error) {
+            console.error('保存模板失败:', error);
+            showAlert('保存模板失败', 'danger');
+        }
+    }
+
+    function cancelCreateTemplate() {
+        document.getElementById('createTemplateForm').classList.add('d-none');
+        document.getElementById('templateName').value = '';
+        document.getElementById('templateContent').value = '';
+        document.getElementById('templateTags').value = '';
+        document.getElementById('templateDescription').value = '';
+        document.getElementById('keywordsList').innerHTML = '';
+        currentKeywords = [];
+    }
+
+    async function loadUserTemplates() {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        try {
+            const response = await fetch('/api/templates/', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const templates = await response.json();
+                displayTemplates(templates);
+            }
+        } catch (error) {
+            console.error('加载模板失败:', error);
+        }
+    }
+
+    function displayTemplates(templates) {
+        const container = document.getElementById('templatesList');
+
+        if (templates.length === 0) {
+            container.innerHTML = '<div class="text-center text-muted">暂无模板</div>';
+            return;
+        }
+
+        container.innerHTML = templates.map(template => `
+            <div class="template-item mb-3 p-3 border rounded">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <h6>${template.name}</h6>
+                        <p class="text-muted small mb-2">${template.description || '无描述'}</p>
+                        <div class="mb-2">
+                            ${template.tags.map(tag => `<span class="badge bg-secondary me-1">${tag}</span>`).join('')}
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">关键词: ${template.keywords.join(', ')}</small>
+                        </div>
+                    </div>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary" onclick="useTemplate(${template.id})">
+                            使用
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="deleteTemplate(${template.id})">
+                            删除
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    async function useTemplate(templateId) {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        try {
+            const response = await fetch(`/api/templates/${templateId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const template = await response.json();
+                showTemplateApplyDialog(template);
+            }
+        } catch (error) {
+            console.error('获取模板失败:', error);
+        }
+    }
+
+    function showTemplateApplyDialog(template) {
+        let html = `
+            <div class="modal fade" id="applyTemplateModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">应用模板: ${template.name}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="text-muted">${template.description || ''}</p>
+        `;
+
+        template.keywords.forEach(keyword => {
+            html += `
+                <div class="mb-3">
+                    <label class="form-label">${keyword}</label>
+                    <input type="text" class="form-control" id="keyword_value_${keyword}" placeholder="输入${keyword}的值">
+                </div>
+            `;
+        });
+
+        html += `
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                            <button type="button" class="btn btn-primary" onclick="applyTemplate(${template.id})">应用</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // 移除现有模态框
+        const existingModal = document.getElementById('applyTemplateModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        document.body.insertAdjacentHTML('beforeend', html);
+        const modal = new bootstrap.Modal(document.getElementById('applyTemplateModal'));
+        modal.show();
+    }
+
+    async function applyTemplate(templateId) {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        // 收集关键词值
+        const keywordValues = {};
+        const inputs = document.querySelectorAll('[id^="keyword_value_"]');
+
+        for (const input of inputs) {
+            const keyword = input.id.replace('keyword_value_', '');
+            const value = input.value.trim();
+            if (!value) {
+                showAlert(`请填写${keyword}的值`, 'warning');
+                return;
+            }
+            keywordValues[keyword] = value;
+        }
+
+        try {
+            const response = await fetch('/api/templates/apply', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    template_id: templateId,
+                    keyword_values: keywordValues
+                })
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+
+                // 将结果插入到重写面板
+                document.getElementById('rewrittenContent').value = result.content;
+
+                // 关闭模态框
+                const modal = bootstrap.Modal.getInstance(document.getElementById('applyTemplateModal'));
+                modal.hide();
+
+                showAlert('模板应用成功', 'success');
+            }
+        } catch (error) {
+            console.error('应用模板失败:', error);
+            showAlert('应用模板失败', 'danger');
+        }
+    }
+
+    async function deleteTemplate(templateId) {
+        if (!confirm('确定要删除这个模板吗？')) return;
+
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        try {
+            const response = await fetch(`/api/templates/${templateId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                showAlert('模板删除成功', 'success');
+                loadUserTemplates();
+            }
+        } catch (error) {
+            console.error('删除模板失败:', error);
+            showAlert('删除模板失败', 'danger');
+        }
+    }
+
+    // ==================== 重写功能 ====================
+
+    let currentRewriteType = '';
+    let currentRewritePosition = 0;
+
+    function startRewrite() {
+        const selection = window.getSelection();
+        const selectedText = selection.toString().trim();
+
+        if (!selectedText) {
+            showAlert('请先选择要重写的文本', 'warning');
+            return;
+        }
+
+        currentRewriteType = 'rewrite';
+        document.getElementById('originalContent').value = selectedText;
+        document.getElementById('rewrittenContent').value = '';
+        document.getElementById('rewriteForm').classList.remove('d-none');
+        document.getElementById('templateSelector').style.display = 'block';
+
+        // 计算选中文本在章节中的位置
+        const range = selection.getRangeAt(0);
+        currentRewritePosition = range.startOffset;
+    }
+
+    function startInsert() {
+        const selection = window.getSelection();
+
+        currentRewriteType = 'insert';
+        document.getElementById('originalContent').value = '';
+        document.getElementById('rewrittenContent').value = '';
+        document.getElementById('rewriteForm').classList.remove('d-none');
+        document.getElementById('templateSelector').style.display = 'block';
+
+        // 计算插入位置
+        if (selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            currentRewritePosition = range.startOffset;
+        } else {
+            currentRewritePosition = 0;
+        }
+    }
+
+    async function loadTemplatesForRewrite() {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        try {
+            const response = await fetch('/api/templates/', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const templates = await response.json();
+                const select = document.getElementById('templateSelect');
+                select.innerHTML = '<option value="">选择模板</option>' +
+                    templates.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+            }
+        } catch (error) {
+            console.error('加载模板失败:', error);
+        }
+    }
+
+    async function applySelectedTemplate() {
+        const templateId = document.getElementById('templateSelect').value;
+        if (!templateId) {
+            showAlert('请选择一个模板', 'warning');
+            return;
+        }
+
+        await useTemplate(parseInt(templateId));
+    }
+
+    async function saveRewrite() {
+        const originalContent = document.getElementById('originalContent').value;
+        const rewrittenContent = document.getElementById('rewrittenContent').value.trim();
+
+        if (!rewrittenContent) {
+            showAlert('请输入重写内容', 'warning');
+            return;
+        }
+
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        try {
+            const response = await fetch('/api/rewrites/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    book_id: currentBook.id,
+                    chapter_id: chapters[currentChapterIndex].id,
+                    original_content: originalContent,
+                    rewritten_content: rewrittenContent,
+                    position: currentRewritePosition,
+                    type: currentRewriteType
+                })
+            });
+
+            if (response.ok) {
+                showAlert('重写保存成功', 'success');
+                cancelRewrite();
+                loadUserRewrites();
+            } else {
+                const error = await response.json();
+                showAlert(error.detail || '保存重写失败', 'danger');
+            }
+        } catch (error) {
+            console.error('保存重写失败:', error);
+            showAlert('保存重写失败', 'danger');
+        }
+    }
+
+    function cancelRewrite() {
+        document.getElementById('rewriteForm').classList.add('d-none');
+        document.getElementById('originalContent').value = '';
+        document.getElementById('rewrittenContent').value = '';
+        document.getElementById('templateSelector').style.display = 'none';
+        currentRewriteType = '';
+        currentRewritePosition = 0;
+    }
+
+    async function loadUserRewrites() {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        try {
+            const response = await fetch(`/api/rewrites/?chapter_id=${chapters[currentChapterIndex].id}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const rewrites = await response.json();
+                displayRewrites(rewrites);
+            }
+        } catch (error) {
+            console.error('加载重写失败:', error);
+        }
+    }
+
+    function displayRewrites(rewrites) {
+        const container = document.getElementById('rewritesList');
+
+        if (rewrites.length === 0) {
+            container.innerHTML = '<div class="text-center text-muted">暂无重写内容</div>';
+            return;
+        }
+
+        container.innerHTML = rewrites.map(rewrite => `
+            <div class="rewrite-item mb-3 p-3 border rounded">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <div class="mb-2">
+                            <span class="badge ${rewrite.type === 'rewrite' ? 'bg-primary' : 'bg-success'}">
+                                ${rewrite.type === 'rewrite' ? '重写' : '插入'}
+                            </span>
+                        </div>
+                        ${rewrite.original_content ? `
+                            <div class="mb-2">
+                                <small class="text-muted">原文:</small>
+                                <div class="text-muted">${rewrite.original_content}</div>
+                            </div>
+                        ` : ''}
+                        <div class="mb-2">
+                            <small class="text-muted">重写:</small>
+                            <div>${rewrite.rewritten_content}</div>
+                        </div>
+                        <small class="text-muted">${new Date(rewrite.created_at).toLocaleString()}</small>
+                    </div>
+                    <button class="btn btn-outline-danger btn-sm" onclick="deleteRewrite(${rewrite.id})">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    async function deleteRewrite(rewriteId) {
+        if (!confirm('确定要删除这个重写吗？')) return;
+
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        try {
+            const response = await fetch(`/api/rewrites/${rewriteId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                showAlert('重写删除成功', 'success');
+                loadUserRewrites();
+            }
+        } catch (error) {
+            console.error('删除重写失败:', error);
+            showAlert('删除重写失败', 'danger');
+        }
+    }
+
+    // ==================== 工具提示相关函数 ====================
+
+    function tooltipTemplateClicked(e, text) {
+        e.stopPropagation();
+        e.preventDefault();
+        const token = localStorage.getItem('token');
+        if (!token) {
+            showAlert('模板功能需要登录后使用', 'warning');
+            return;
+        }
+
+        // 打开模板面板并填充选中的文本
+        toggleTemplates();
+        setTimeout(() => {
+            currentSelectedText = text;
+            document.getElementById('templateContent').value = text;
+            document.getElementById('createTemplateForm').classList.remove('d-none');
+            extractKeywords();
+        }, 100);
+    }
+
+    function tooltipRewriteClicked(e, text) {
+        e.stopPropagation();
+        e.preventDefault();
+
+        const token = localStorage.getItem('token');
+        if (!token) {
+            showAlert('重写功能需要登录后使用', 'warning');
+            return;
+        }
+
+        // 打开重写面板并设置为重写模式
+        toggleRewrite();
+        setTimeout(() => {
+            currentRewriteType = 'rewrite';
+            document.getElementById('originalContent').value = text;
+            document.getElementById('rewrittenContent').value = '';
+            document.getElementById('rewriteForm').classList.remove('d-none');
+            document.getElementById('templateSelector').style.display = 'block';
+
+            // 计算选中文本的位置
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                currentRewritePosition = range.startOffset;
+            }
+        }, 100);
+    }
+
+    function tooltipSensitiveClicked(e, text) {
+        e.stopPropagation();
+        e.preventDefault();
+        // 打开敏感词面板
+        toggleSensitiveWords();
+
+        // 可以在这里添加预填充敏感词的逻辑
+        setTimeout(() => {
+            const newSensitiveWordInput = document.getElementById('newSensitiveWord');
+            if (newSensitiveWordInput && text.length < 20) {
+                // 如果选中文本较短，可以作为敏感词候选
+                newSensitiveWordInput.value = text;
+            }
+        }, 100);
+    }
 </script>
 {% endblock %}
