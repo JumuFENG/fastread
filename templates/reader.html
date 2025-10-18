@@ -100,7 +100,8 @@
                                 onchange="toggleAutoScroll()">
                             <label class="form-check-label" for="autoScrollCheckbox">自动滚动</label>
                             <input type="number" class="form-control form-control-sm" id="autoScrollSpeed"
-                                placeholder="滚动速度 (ms)" value="10" min="20" style="width: 50px; display: inline-block; margin-left: 10px;"
+                                placeholder="滚动速度 (ms)" value="10" min="20"
+                                style="width: 50px; display: inline-block; margin-left: 10px;"
                                 onchange="updateAutoScrollSpeed()">
                         </div>
                     </div>
@@ -167,7 +168,8 @@
                         <i class="bi bi-skip-end"></i>
                     </button>
                     <div class="chapter-info">
-                        <input id="chapterProgress" onchange="jumpToChapter()"></input>/&nbsp<span id="totalChapters">1</span>
+                        <input id="chapterProgress" onchange="jumpToChapter()"></input>/&nbsp<span
+                            id="totalChapters">1</span>
                     </div>
                     <button id="nextChapter" class="btn btn-link" onclick="nextChapter()" disabled>
                         <span class="d-none d-md-inline">下一章</span>
@@ -231,6 +233,7 @@
     let chapters = [];
     let currentChapterIndex = 0;
     let readingProgress = null;
+    let lastSavedProgress = null; // 跟踪上次保存的进度
     let chapterDisplayRange = { start: 0, end: 20 }; // 默认显示前20章
     const CHAPTER_DISPLAY_COUNT = 20; // 每次显示的章节数量
     let excerpts = JSON.parse(localStorage.getItem('excerpts') || '[]');
@@ -239,7 +242,7 @@
     let autoScrollSpeed = 30;
 
     document.addEventListener('DOMContentLoaded', function () {
-        const bookId = {{ book_id| tojson
+        const bookId = {{ book_id | tojson
     }};
     console.log('阅读器初始化，书籍ID:', bookId);
 
@@ -384,8 +387,8 @@
 
             updateChapterProgress();
 
-            // 保存阅读进度
-            saveReadingProgress();
+            // 强制保存阅读进度（章节切换时）
+            saveReadingProgress(true);
 
             // 滚动到顶部
             window.scrollTo(0, 0);
@@ -443,11 +446,12 @@
         try {
             const token = localStorage.getItem('token');
             if (!token) {
-                console.log('用户未登录，从第一章开始阅读');
                 let localReadingProgress = JSON.parse(localStorage.getItem('localReadingProgress'));
                 if (localReadingProgress && localReadingProgress[bookId]) {
                     readingProgress = localReadingProgress[bookId];
                     currentChapterIndex = readingProgress.current_chapter - 1;
+                    // 初始化上次保存的进度
+                    lastSavedProgress = { ...readingProgress };
                     console.log('加载本地阅读进度，从第', currentChapterIndex + 1, '章开始');
                 }
                 loadChapter(currentChapterIndex);
@@ -464,6 +468,8 @@
             if (response.ok) {
                 readingProgress = await response.json();
                 currentChapterIndex = readingProgress.current_chapter - 1;
+                // 初始化上次保存的进度
+                lastSavedProgress = { ...readingProgress };
                 console.log('加载阅读进度，从第', currentChapterIndex + 1, '章开始');
                 loadChapter(currentChapterIndex);
                 preloadChapter(currentChapterIndex + 1);
@@ -479,17 +485,32 @@
         }
     }
 
-    async function saveReadingProgress() {
-        readingProgress = {
+    async function saveReadingProgress(force = false) {
+        const newProgress = {
             current_chapter: currentChapterIndex + 1,
             reading_position: window.pageYOffset
         };
 
+        // 检查进度是否有变化（除非强制保存）
+        if (!force && lastSavedProgress &&
+            lastSavedProgress.current_chapter === newProgress.current_chapter &&
+            Math.abs(lastSavedProgress.reading_position - newProgress.reading_position) < 100) {
+            // 如果章节没变且滚动位置变化小于100px，则不保存
+            console.log('阅读进度无显著变化，跳过保存');
+            return;
+        }
+
+        readingProgress = newProgress;
+
         const token = localStorage.getItem('token');
         if (!token) {
-            let localReadingProgress = JSON.parse(localStorage.getItem('localReadingProgress'))??{};
+            let localReadingProgress = JSON.parse(localStorage.getItem('localReadingProgress')) ?? {};
             localReadingProgress[currentBook.id] = readingProgress;
             localStorage.setItem('localReadingProgress', JSON.stringify(localReadingProgress));
+
+            // 更新上次保存的进度
+            lastSavedProgress = { ...readingProgress };
+            console.log('本地阅读进度已保存:', readingProgress);
             return;
         }
 
@@ -502,6 +523,10 @@
                 },
                 body: JSON.stringify(readingProgress)
             });
+
+            // 保存成功后更新上次保存的进度
+            lastSavedProgress = { ...readingProgress };
+            console.log('服务器阅读进度已保存:', readingProgress);
         } catch (error) {
             console.error('保存阅读进度失败:', error);
         }
@@ -766,7 +791,7 @@
         const html = sensitiveWords[currentBook.id].map((wordPair, index) => `
             <div class="sensitive-word-item">
                 <div class="word-pair">
-                    <input class="form-check-input" type="checkbox" ${wordPair.enabled? 'checked' : ''} onchange="toggleSensitiveWord(${index})">
+                    <input class="form-check-input" type="checkbox" ${wordPair.enabled ? 'checked' : ''} onchange="toggleSensitiveWord(${index})">
                     <span class="original-word">${wordPair.original}</span>
                     <span>→</span>
                     <span class="replacement-word">${wordPair.replacement}</span>
@@ -1035,8 +1060,13 @@
         }
     });
 
-    // 定期保存阅读进度
-    setInterval(saveReadingProgress, 30000); // 每30秒保存一次
+    // 定期保存阅读进度（智能检查，避免无意义的保存）
+    setInterval(saveReadingProgress, 30000); // 每30秒保存一次，但只在有变化时保存
     setInterval(showProgressOnNavigation, 300); // 每300毫秒更新进度条
+
+    // 页面卸载时强制保存进度
+    window.addEventListener('beforeunload', function () {
+        saveReadingProgress(true);
+    });
 </script>
 {% endblock %}

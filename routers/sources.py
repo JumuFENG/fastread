@@ -11,11 +11,13 @@ router = APIRouter()
 class BookSourceResponse(BaseModel):
     id: int|str
     name: str
+    url: str
 
 def parser_to_booksource(parser: BaseBookSourceParser) -> BookSourceResponse:
     return {
         "id": parser.get_parser_name()[0],
-        "name": parser.get_parser_name()[-1]
+        "name": parser.get_parser_name()[-1],
+        "url": parser.base_url
     }
 
 class BookSourceCreate(BaseModel):

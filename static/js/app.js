@@ -5,13 +5,166 @@ let bookSources = [];
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', function() {
     checkAuthStatus();
+    initializeFormValidation();
 });
+
+// 初始化表单验证
+function initializeFormValidation() {
+    // 登录表单回车提交
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                login();
+            }
+        });
+    }
+
+    // 注册表单回车提交
+    const registerForm = document.getElementById('registerForm');
+    if (registerForm) {
+        registerForm.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                register();
+            }
+        });
+    }
+
+    // 实时验证用户名
+    const usernameInput = document.getElementById('registerUsername');
+    if (usernameInput) {
+        usernameInput.addEventListener('input', function() {
+            validateUsername(this.value.trim());
+        });
+    }
+
+    // 实时验证邮箱
+    const emailInput = document.getElementById('registerEmail');
+    if (emailInput) {
+        emailInput.addEventListener('input', function() {
+            validateEmail(this.value.trim());
+        });
+    }
+
+    // 实时验证密码
+    const passwordInput = document.getElementById('registerPassword');
+    if (passwordInput) {
+        passwordInput.addEventListener('input', function() {
+            validatePassword(this.value);
+        });
+    }
+
+    // 实时验证确认密码
+    const confirmPasswordInput = document.getElementById('confirmPassword');
+    if (confirmPasswordInput) {
+        confirmPasswordInput.addEventListener('input', function() {
+            validateConfirmPassword(this.value);
+        });
+    }
+}
+
+// 验证用户名
+function validateUsername(username) {
+    const input = document.getElementById('registerUsername');
+
+    if (!username) {
+        input.classList.remove('is-valid', 'is-invalid');
+        return;
+    }
+
+    if (username.length < 3 || username.length > 20) {
+        input.classList.remove('is-valid');
+        input.classList.add('is-invalid');
+        return false;
+    }
+
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+        input.classList.remove('is-valid');
+        input.classList.add('is-invalid');
+        return false;
+    }
+
+    input.classList.remove('is-invalid');
+    input.classList.add('is-valid');
+    return true;
+}
+
+// 验证邮箱
+function validateEmail(email) {
+    const input = document.getElementById('registerEmail');
+
+    if (!email) {
+        input.classList.remove('is-valid', 'is-invalid');
+        return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        input.classList.remove('is-valid');
+        input.classList.add('is-invalid');
+        return false;
+    }
+
+    input.classList.remove('is-invalid');
+    input.classList.add('is-valid');
+    return true;
+}
+
+// 验证密码
+function validatePassword(password) {
+    const input = document.getElementById('registerPassword');
+
+    if (!password) {
+        input.classList.remove('is-valid', 'is-invalid');
+        return;
+    }
+
+    if (password.length < 6) {
+        input.classList.remove('is-valid');
+        input.classList.add('is-invalid');
+        return false;
+    }
+
+    input.classList.remove('is-invalid');
+    input.classList.add('is-valid');
+
+    // 同时验证确认密码
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    if (confirmPassword) {
+        validateConfirmPassword(confirmPassword);
+    }
+
+    return true;
+}
+
+// 验证确认密码
+function validateConfirmPassword(confirmPassword) {
+    const input = document.getElementById('confirmPassword');
+    const password = document.getElementById('registerPassword').value;
+
+    if (!confirmPassword) {
+        input.classList.remove('is-valid', 'is-invalid');
+        return;
+    }
+
+    if (password !== confirmPassword) {
+        input.classList.remove('is-valid');
+        input.classList.add('is-invalid');
+        return false;
+    }
+
+    input.classList.remove('is-invalid');
+    input.classList.add('is-valid');
+    return true;
+}
 
 // 检查登录状态
 function checkAuthStatus() {
     const token = localStorage.getItem('token');
     const username = localStorage.getItem('username');
-    
+
     if (token && username) {
         currentUser = { username: username };
         updateNavbar(true);
@@ -24,17 +177,24 @@ function checkAuthStatus() {
 function updateNavbar(isLoggedIn) {
     const loginNav = document.getElementById('loginNav');
     const userNav = document.getElementById('userNav');
+    const adminNav = document.getElementById('adminNav');
     const usernameSpan = document.getElementById('username');
-    
+
     if (isLoggedIn) {
         loginNav.classList.add('d-none');
         userNav.classList.remove('d-none');
         if (usernameSpan) {
             usernameSpan.textContent = currentUser.username;
         }
+
+        // 简单的管理员检查（实际应用中应该从服务器验证）
+        if (currentUser.username === 'admin' || currentUser.username === 'administrator') {
+            if (adminNav) adminNav.classList.remove('d-none');
+        }
     } else {
         loginNav.classList.remove('d-none');
         userNav.classList.add('d-none');
+        if (adminNav) adminNav.classList.add('d-none');
     }
 }
 
@@ -51,55 +211,184 @@ function showRegisterModal() {
     if (loginModal) {
         loginModal.hide();
     }
-    
-    // 这里可以添加注册模态框的代码
-    showAlert('注册功能待实现', 'info');
+
+    // 显示注册模态框
+    const modal = new bootstrap.Modal(document.getElementById('registerModal'));
+    modal.show();
+
+    // 清空错误信息
+    const errorDiv = document.getElementById('registerError');
+    if (errorDiv) {
+        errorDiv.classList.add('d-none');
+    }
 }
 
 // 登录
 async function login() {
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-    
+    const username = document.getElementById('loginUsername').value;
+    const password = document.getElementById('loginPassword').value;
+    const errorDiv = document.getElementById('loginError');
+    const loginBtn = document.getElementById('loginBtn');
+
+    // 清空之前的错误信息
+    errorDiv.classList.add('d-none');
+
     if (!username || !password) {
-        showAlert('请输入用户名和密码', 'warning');
+        errorDiv.textContent = '请输入用户名和密码';
+        errorDiv.classList.remove('d-none');
         return;
     }
-    
+
+    // 禁用登录按钮，显示加载状态
+    loginBtn.disabled = true;
+    loginBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>登录中...';
+
     try {
         const formData = new FormData();
         formData.append('username', username);
         formData.append('password', password);
-        
+
         const response = await fetch('/api/auth/token', {
             method: 'POST',
             body: formData
         });
-        
+
         if (response.ok) {
             const data = await response.json();
             localStorage.setItem('token', data.access_token);
             localStorage.setItem('username', username);
-            
+
             currentUser = { username: username };
             updateNavbar(true);
-            
+
             // 关闭模态框
             const modal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
             modal.hide();
-            
+
             showAlert('登录成功', 'success');
-            
+
             // 清空表单
             document.getElementById('loginForm').reset();
-            
+
         } else {
             const error = await response.json();
-            showAlert(error.detail || '登录失败', 'danger');
+            errorDiv.textContent = error.detail || '登录失败';
+            errorDiv.classList.remove('d-none');
         }
     } catch (error) {
         console.error('登录失败:', error);
-        showAlert('登录失败，请检查网络连接', 'danger');
+        errorDiv.textContent = '登录失败，请检查网络连接';
+        errorDiv.classList.remove('d-none');
+    } finally {
+        // 恢复登录按钮
+        loginBtn.disabled = false;
+        loginBtn.innerHTML = '登录';
+    }
+}
+
+// 注册
+async function register() {
+    const username = document.getElementById('registerUsername').value.trim();
+    const email = document.getElementById('registerEmail').value.trim();
+    const password = document.getElementById('registerPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    const errorDiv = document.getElementById('registerError');
+    const registerBtn = document.getElementById('registerBtn');
+
+    // 清空之前的错误信息
+    errorDiv.classList.add('d-none');
+
+    // 验证输入
+    if (!username || !email || !password || !confirmPassword) {
+        errorDiv.textContent = '请填写所有字段';
+        errorDiv.classList.remove('d-none');
+        return;
+    }
+
+    // 验证用户名格式
+    if (username.length < 3 || username.length > 20) {
+        errorDiv.textContent = '用户名长度必须在3-20个字符之间';
+        errorDiv.classList.remove('d-none');
+        return;
+    }
+
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+        errorDiv.textContent = '用户名只能包含字母、数字和下划线';
+        errorDiv.classList.remove('d-none');
+        return;
+    }
+
+    // 验证邮箱格式
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        errorDiv.textContent = '请输入有效的邮箱地址';
+        errorDiv.classList.remove('d-none');
+        return;
+    }
+
+    // 验证密码长度
+    if (password.length < 6) {
+        errorDiv.textContent = '密码长度至少6个字符';
+        errorDiv.classList.remove('d-none');
+        return;
+    }
+
+    // 验证密码确认
+    if (password !== confirmPassword) {
+        errorDiv.textContent = '两次输入的密码不一致';
+        errorDiv.classList.remove('d-none');
+        return;
+    }
+
+    // 禁用注册按钮，显示加载状态
+    registerBtn.disabled = true;
+    registerBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>注册中...';
+
+    try {
+        const response = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                username: username,
+                email: email,
+                password: password
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+
+            // 注册成功后自动登录
+            localStorage.setItem('token', data.access_token);
+            localStorage.setItem('username', username);
+
+            currentUser = { username: username };
+            updateNavbar(true);
+
+            // 关闭模态框
+            const modal = bootstrap.Modal.getInstance(document.getElementById('registerModal'));
+            modal.hide();
+
+            showAlert('注册成功，欢迎使用FastRead！', 'success');
+
+            // 清空表单
+            document.getElementById('registerForm').reset();
+
+        } else {
+            const error = await response.json();
+            errorDiv.textContent = error.detail || '注册失败';
+            errorDiv.classList.remove('d-none');
+        }
+    } catch (error) {
+        console.error('注册失败:', error);
+        errorDiv.textContent = '注册失败，请检查网络连接';
+        errorDiv.classList.remove('d-none');
+    } finally {
+        // 恢复注册按钮
+        registerBtn.disabled = false;
+        registerBtn.innerHTML = '注册';
     }
 }
 
@@ -110,7 +399,7 @@ function logout() {
     currentUser = null;
     updateNavbar(false);
     showAlert('已退出登录', 'info');
-    
+
     // 如果在需要登录的页面，可以重定向到首页
     if (window.location.pathname.includes('/book/')) {
         window.location.href = '/';
@@ -123,11 +412,11 @@ function showSearchModal() {
         // 同时填充两个书源选择器
         const searchSelect = document.getElementById('searchSource');
         const urlSelect = document.getElementById('urlSource');
-        
+
         if (searchSelect && urlSelect) {
             urlSelect.innerHTML = searchSelect.innerHTML;
         }
-        
+
         const modal = new bootstrap.Modal(document.getElementById('searchModal'));
         modal.show();
     });
@@ -138,13 +427,13 @@ async function loadBookSources() {
     try {
         const response = await fetch('/api/sources/');
         bookSources = await response.json();
-        
+
         const select = document.getElementById('searchSource');
-        select.innerHTML = '<option value="">选择书源</option>' + 
-            bookSources.map(source => 
+        select.innerHTML = '<option value="">选择书源</option>' +
+            bookSources.map(source =>
                 `<option value="${source.id}">${source.name}</option>`
             ).join('');
-            
+
     } catch (error) {
         console.error('加载书源失败:', error);
         showAlert('加载书源失败', 'danger');
@@ -155,34 +444,34 @@ async function loadBookSources() {
 async function searchBooks() {
     const sourceId = document.getElementById('searchSource').value;
     const keyword = document.getElementById('searchKeyword').value.trim();
-    
+
     if (!sourceId) {
         showAlert('请选择书源', 'warning');
         return;
     }
-    
+
     if (!keyword) {
         showAlert('请输入搜索关键词', 'warning');
         return;
     }
-    
+
     const resultsDiv = document.getElementById('searchResults');
     resultsDiv.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
-    
+
     try {
         const response = await fetch(`/api/sources/${sourceId}/search?keyword=${encodeURIComponent(keyword)}`);
         const results = await response.json();
-        
+
         if (results.length === 0) {
             resultsDiv.innerHTML = '<div class="text-center text-muted">未找到相关书籍</div>';
             return;
         }
-        
+
         resultsDiv.innerHTML = results.map(book => `
             <div class="search-result-item">
                 <div class="row">
                     <div class="col-2">
-                        <img src="${book.cover_url || '/static/images/default-cover.jpg'}" 
+                        <img src="${book.cover_url || '/static/images/default-cover.jpg'}"
                              class="search-result-cover" alt="${book.title}">
                     </div>
                     <div class="col-8">
@@ -191,7 +480,7 @@ async function searchBooks() {
                         <p class="small">${book.description.substring(0, 150)}...</p>
                     </div>
                     <div class="col-2 d-flex align-items-center">
-                        <button class="btn btn-primary btn-sm" 
+                        <button class="btn btn-primary btn-sm"
                                 onclick="importBook('${sourceId}', '${book.source_url}')">
                             <i class="bi bi-download"></i> 导入
                         </button>
@@ -199,7 +488,7 @@ async function searchBooks() {
                 </div>
             </div>
         `).join('');
-        
+
     } catch (error) {
         console.error('搜索失败:', error);
         resultsDiv.innerHTML = '<div class="text-center text-danger">搜索失败，请重试</div>';
@@ -219,7 +508,7 @@ async function importBook(sourceId, bookUrl) {
                 book_url: bookUrl
             })
         });
-        
+
         if (response.ok) {
             const result = await response.json();
             showAlert(result.message, 'success');
@@ -254,26 +543,26 @@ async function showReadingHistory() {
         showAlert('请先登录', 'warning');
         return;
     }
-    
+
     try {
         const response = await fetch('/api/reading/history', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
         });
-        
+
         if (response.ok) {
             const history = await response.json();
-            
+
             if (history.length === 0) {
                 showAlert('暂无阅读历史', 'info');
                 return;
             }
-            
+
             // 这里可以显示一个模态框展示阅读历史
             console.log('阅读历史:', history);
             showAlert('阅读历史功能待完善', 'info');
-            
+
         } else {
             showAlert('获取阅读历史失败', 'danger');
         }
@@ -290,7 +579,7 @@ function showAlert(message, type = 'info') {
     if (existingAlert) {
         existingAlert.remove();
     }
-    
+
     // 创建新的提示
     const alert = document.createElement('div');
     alert.className = `alert alert-${type} alert-floating position-fixed`;
@@ -307,9 +596,9 @@ function showAlert(message, type = 'info') {
             <button type="button" class="btn-close btn-close-white ms-2" onclick="this.parentElement.parentElement.remove()"></button>
         </div>
     `;
-    
+
     document.body.appendChild(alert);
-    
+
     // 3秒后自动移除
     setTimeout(() => {
         if (alert.parentElement) {
@@ -344,13 +633,13 @@ async function loadSourceList() {
     try {
         const response = await fetch('/api/sources/');
         const sources = await response.json();
-        
+
         const sourceList = document.getElementById('sourceList');
         if (sources.length === 0) {
             sourceList.innerHTML = '<div class="text-center text-muted p-3">暂无书源</div>';
             return;
         }
-        
+
         sourceList.innerHTML = sources.map(source => `
             <div class="source-item" data-id="${source.id}">
                 <div class="d-flex justify-content-between align-items-start">
@@ -380,7 +669,7 @@ async function loadSourceList() {
                 </div>
             </div>
         `).join('');
-        
+
     } catch (error) {
         console.error('加载书源列表失败:', error);
         showAlert('加载书源列表失败', 'danger');
@@ -392,7 +681,7 @@ function showAddSourceForm() {
     const sourceForm = document.getElementById('sourceForm');
     const presetSources = document.getElementById('presetSources');
     const addSourceForm = document.getElementById('addSourceForm');
-    
+
     if (sourceForm) sourceForm.classList.remove('d-none');
     if (presetSources) presetSources.classList.add('d-none');
     if (addSourceForm) addSourceForm.reset();
@@ -461,7 +750,7 @@ async function saveBookSource() {
         chapter_url_pattern: document.getElementById('chapterUrlPattern').value,
         content_selector: document.getElementById('contentSelector').value
     };
-    
+
     // 验证必填字段
     if (!formData.name || !formData.url || !formData.search_url) {
         showAlert('请填写必填字段', 'warning');
@@ -479,7 +768,7 @@ async function updateBookSource(sourceData) {
             },
             body: JSON.stringify({name:sourceData.name, sourcejson: sourceData})
         });
-        
+
         if (response.ok) {
             showAlert('书源添加成功', 'success');
             hideAddSourceForm();
@@ -498,24 +787,24 @@ async function updateBookSource(sourceData) {
 async function testBookSource() {
     const searchUrl = document.getElementById('searchUrl').value;
     const contentSelector = document.getElementById('contentSelector').value;
-    
+
     if (!searchUrl) {
         showAlert('请先填写搜索URL', 'warning');
         return;
     }
-    
+
     // 移除现有的测试结果
     const existingResult = document.querySelector('.test-result');
     if (existingResult) {
         existingResult.remove();
     }
-    
+
     // 显示测试中状态
     const testResult = document.createElement('div');
     testResult.className = 'test-result';
     testResult.innerHTML = '<i class="bi bi-hourglass-split"></i> 正在测试书源...';
     document.getElementById('addSourceForm').appendChild(testResult);
-    
+
     try {
         // 这里可以添加实际的测试逻辑
         // 暂时模拟测试结果
@@ -529,7 +818,7 @@ async function testBookSource() {
                 </div>
             `;
         }, 2000);
-        
+
     } catch (error) {
         testResult.className = 'test-result error';
         testResult.innerHTML = `<i class="bi bi-x-circle"></i> 测试失败: ${error.message}`;
@@ -564,12 +853,12 @@ function addPresetSource(type) {
             content_selector: ''
         }
     };
-    
+
     const preset = presets[type];
     if (preset) {
         // 先显示表单
         showAddSourceForm();
-        
+
         // 等待DOM更新后再填充数据
         setTimeout(() => {
             const sourceNameEl = document.getElementById('sourceName');
@@ -578,26 +867,26 @@ function addPresetSource(type) {
             const bookUrlPatternEl = document.getElementById('bookUrlPattern');
             const chapterUrlPatternEl = document.getElementById('chapterUrlPattern');
             const contentSelectorEl = document.getElementById('contentSelector');
-            
+
             console.log('填充预设书源:', type, preset);
             console.log('表单元素:', {
-                sourceNameEl, sourceUrlEl, searchUrlEl, 
+                sourceNameEl, sourceUrlEl, searchUrlEl,
                 bookUrlPatternEl, chapterUrlPatternEl, contentSelectorEl
             });
-            
+
             if (sourceNameEl) {
                 sourceNameEl.value = preset.name;
                 console.log('设置书源名称:', preset.name);
             } else {
                 console.error('未找到sourceName元素');
             }
-            
+
             if (sourceUrlEl) sourceUrlEl.value = preset.url;
             if (searchUrlEl) searchUrlEl.value = preset.search_url;
             if (bookUrlPatternEl) bookUrlPatternEl.value = preset.book_url_pattern;
             if (chapterUrlPatternEl) chapterUrlPatternEl.value = preset.chapter_url_pattern;
             if (contentSelectorEl) contentSelectorEl.value = preset.content_selector;
-            
+
             // 验证填充结果
             console.log('填充后的值:', {
                 name: sourceNameEl?.value,
@@ -615,16 +904,16 @@ function importFromJson() {
         showAlert('请输入JSON配置', 'warning');
         return;
     }
-    
+
     try {
         const sourceData = JSON.parse(jsonText);
-        
+
         // 验证JSON格式
         if (!sourceData.name) {
             showAlert('JSON格式不正确，缺少必要字段', 'danger');
             return;
         }
-        
+
         updateBookSource(sourceData);
     } catch (error) {
         showAlert('JSON格式错误: ' + error.message, 'danger');
@@ -635,25 +924,25 @@ function importFromJson() {
 function importFromFile() {
     const fileInput = document.getElementById('importFile');
     const file = fileInput.files[0];
-    
+
     if (!file) {
         showAlert('请选择文件', 'warning');
         return;
     }
-    
+
     const reader = new FileReader();
     reader.onload = function(e) {
         try {
             const content = e.target.result;
             let sourceData;
-            
+
             if (file.name.endsWith('.json')) {
                 sourceData = JSON.parse(content);
             } else {
                 // 尝试解析文本文件
                 sourceData = JSON.parse(content);
             }
-            
+
             // 如果是书源数组，导入第一个
             if (Array.isArray(sourceData)) {
                 sourceData = sourceData[0];
@@ -668,7 +957,7 @@ function importFromFile() {
             showAlert('文件格式错误: ' + error.message, 'danger');
         }
     };
-    
+
     reader.readAsText(file);
 }
 
@@ -677,10 +966,10 @@ async function editSource(sourceId) {
     try {
         const response = await fetch(`/api/sources/${sourceId}`);
         const source = await response.json();
-        
+
         // 先显示表单
         showAddSourceForm();
-        
+
         // 等待DOM更新后再填充数据
         setTimeout(() => {
             const sourceNameEl = document.getElementById('sourceName');
@@ -689,14 +978,14 @@ async function editSource(sourceId) {
             const bookUrlPatternEl = document.getElementById('bookUrlPattern');
             const chapterUrlPatternEl = document.getElementById('chapterUrlPattern');
             const contentSelectorEl = document.getElementById('contentSelector');
-            
+
             if (sourceNameEl) sourceNameEl.value = source.name || '';
             if (sourceUrlEl) sourceUrlEl.value = source.url || '';
             if (searchUrlEl) searchUrlEl.value = source.search_url || '';
             if (bookUrlPatternEl) bookUrlPatternEl.value = source.book_url_pattern || '';
             if (chapterUrlPatternEl) chapterUrlPatternEl.value = source.chapter_url_pattern || '';
             if (contentSelectorEl) contentSelectorEl.value = source.content_selector || '';
-            
+
             // 修改保存按钮为更新
             const saveBtn = document.querySelector('#addSourceForm button[onclick="saveBookSource()"]');
             if (saveBtn) {
@@ -704,7 +993,7 @@ async function editSource(sourceId) {
                 saveBtn.setAttribute('onclick', `updateBookSource('${sourceId}')`);
             }
         }, 100);
-        
+
     } catch (error) {
         console.error('加载书源详情失败:', error);
         showAlert('加载书源详情失败', 'danger');
@@ -721,7 +1010,7 @@ async function editSource(sourceId) {
 //         chapter_url_pattern: document.getElementById('chapterUrlPattern').value,
 //         content_selector: document.getElementById('contentSelector').value
 //     };
-    
+
 //     try {
 //         const response = await fetch(`/api/sources/${sourceId}`, {
 //             method: 'PUT',
@@ -730,12 +1019,12 @@ async function editSource(sourceId) {
 //             },
 //             body: JSON.stringify(formData)
 //         });
-        
+
 //         if (response.ok) {
 //             showAlert('书源更新成功', 'success');
 //             hideAddSourceForm();
 //             loadSourceList();
-            
+
 //             // 恢复保存按钮
 //             const saveBtn = document.querySelector('#addSourceForm button[onclick^="updateBookSource"]');
 //             if (saveBtn) {
@@ -755,12 +1044,12 @@ async function editSource(sourceId) {
 // 测试指定书源
 async function testSource(sourceId) {
     showAlert('正在测试书源...', 'info');
-    
+
     try {
         const response = await fetch(`/api/sources/${sourceId}/test`, {
             method: 'POST'
         });
-        
+
         if (response.ok) {
             const result = await response.json();
             showAlert('书源测试成功', 'success');
@@ -779,7 +1068,7 @@ async function toggleSource(sourceId) {
         const response = await fetch(`/api/sources/${sourceId}/toggle`, {
             method: 'POST'
         });
-        
+
         if (response.ok) {
             showAlert('书源状态更新成功', 'success');
             loadSourceList();
@@ -799,12 +1088,12 @@ async function deleteSource(sourceId) {
     if (!confirm('确定要删除这个书源吗？')) {
         return;
     }
-    
+
     try {
         const response = await fetch(`/api/sources/${sourceId}`, {
             method: 'DELETE'
         });
-        
+
         if (response.ok) {
             showAlert('书源删除成功', 'success');
             loadSourceList();
@@ -836,9 +1125,9 @@ window.debugBookSource = {
             sourceForm: document.getElementById('sourceForm'),
             presetSources: document.getElementById('presetSources')
         };
-        
+
         console.log('表单元素检查:', elements);
-        
+
         Object.keys(elements).forEach(key => {
             if (!elements[key]) {
                 console.error(`未找到元素: ${key}`);
@@ -846,10 +1135,10 @@ window.debugBookSource = {
                 console.log(`✓ 找到元素: ${key}`);
             }
         });
-        
+
         return elements;
     },
-    
+
     // 测试填充表单
     testFill: function() {
         const testData = {
@@ -860,25 +1149,25 @@ window.debugBookSource = {
             chapter_url_pattern: '/chapter/*',
             content_selector: '.content'
         };
-        
+
         console.log('测试数据:', testData);
-        
+
         const elements = this.checkElements();
-        
+
         if (elements.sourceName) elements.sourceName.value = testData.name;
         if (elements.sourceUrl) elements.sourceUrl.value = testData.url;
         if (elements.searchUrl) elements.searchUrl.value = testData.search_url;
         if (elements.bookUrlPattern) elements.bookUrlPattern.value = testData.book_url_pattern;
         if (elements.chapterUrlPattern) elements.chapterUrlPattern.value = testData.chapter_url_pattern;
         if (elements.contentSelector) elements.contentSelector.value = testData.content_selector;
-        
+
         console.log('填充完成，当前值:', {
             name: elements.sourceName?.value,
             url: elements.sourceUrl?.value,
             searchUrl: elements.searchUrl?.value
         });
     },
-    
+
     // 显示表单
     showForm: function() {
         showAddSourceForm();
@@ -886,7 +1175,7 @@ window.debugBookSource = {
             this.checkElements();
         }, 200);
     },
-    
+
     // 测试预设书源
     testPreset: function(type = 'biquge') {
         console.log('测试预设书源:', type);
@@ -901,12 +1190,12 @@ async function importFromUrl() {
     const bookUrl = document.getElementById('bookUrl').value.trim();
     const sourceId = document.getElementById('urlSource').value;
     const autoDetect = document.getElementById('autoDetectSource').checked;
-    
+
     if (!bookUrl) {
         showAlert('请输入书籍URL', 'warning');
         return;
     }
-    
+
     // 验证URL格式
     try {
         new URL(bookUrl);
@@ -914,9 +1203,9 @@ async function importFromUrl() {
         showAlert('URL格式不正确', 'warning');
         return;
     }
-    
+
     let finalSourceId = sourceId;
-    
+
     // 智能识别书源
     if (autoDetect && !sourceId) {
         finalSourceId = await detectBookSource(bookUrl);
@@ -925,12 +1214,12 @@ async function importFromUrl() {
             return;
         }
     }
-    
+
     if (!finalSourceId) {
         showAlert('请选择书源', 'warning');
         return;
     }
-    
+
     // 显示导入进度
     const resultsDiv = document.getElementById('searchResults');
     resultsDiv.innerHTML = `
@@ -944,7 +1233,7 @@ async function importFromUrl() {
             </div>
         </div>
     `;
-    
+
     try {
         const response = await fetch('/api/sources/import', {
             method: 'POST',
@@ -956,7 +1245,7 @@ async function importFromUrl() {
                 book_url: bookUrl
             })
         });
-        
+
         if (response.ok) {
             const result = await response.json();
             resultsDiv.innerHTML = `
@@ -964,10 +1253,10 @@ async function importFromUrl() {
                     <i class="bi bi-check-circle"></i> ${result.message}
                 </div>
             `;
-            
+
             // 清空输入框
             document.getElementById('bookUrl').value = '';
-            
+
             // 刷新书架
             if (typeof loadBooks === 'function') {
                 setTimeout(loadBooks, 2000);
@@ -1001,20 +1290,20 @@ async function detectBookSource(url) {
             },
             body: JSON.stringify({ book_url: url })
         });
-        
+
         if (response.ok) {
             const result = await response.json();
             if (result.source_id) {
                 const matchType = result.match_type === 'exact' ? '精确匹配' : '模糊匹配';
                 console.log(`${matchType}到书源:`, result.source_name);
                 showAlert(`${matchType}到书源: ${result.source_name}`, 'info');
-                
+
                 // 自动选择检测到的书源
                 const urlSelect = document.getElementById('urlSource');
                 if (urlSelect) {
                     urlSelect.value = result.source_id;
                 }
-                
+
                 return result.source_id;
             } else {
                 console.log('未找到匹配的书源');
@@ -1035,22 +1324,22 @@ async function batchImportFromUrls() {
     const batchUrls = document.getElementById('batchUrls').value.trim();
     const sourceId = document.getElementById('urlSource').value;
     const autoDetect = document.getElementById('autoDetectSource').checked;
-    
+
     if (!batchUrls) {
         showAlert('请输入要导入的URL列表', 'warning');
         return;
     }
-    
+
     // 解析URL列表
     const urls = batchUrls.split('\n')
         .map(url => url.trim())
         .filter(url => url.length > 0);
-    
+
     if (urls.length === 0) {
         showAlert('没有找到有效的URL', 'warning');
         return;
     }
-    
+
     // 验证URL格式
     const invalidUrls = [];
     for (const url of urls) {
@@ -1060,16 +1349,16 @@ async function batchImportFromUrls() {
             invalidUrls.push(url);
         }
     }
-    
+
     if (invalidUrls.length > 0) {
         showAlert(`以下URL格式不正确:\n${invalidUrls.join('\n')}`, 'warning');
         return;
     }
-    
+
     if (!confirm(`确定要导入 ${urls.length} 本书籍吗？`)) {
         return;
     }
-    
+
     // 显示批量导入进度
     const resultsDiv = document.getElementById('searchResults');
     resultsDiv.innerHTML = `
@@ -1082,30 +1371,30 @@ async function batchImportFromUrls() {
             <div id="batchResults" class="mt-2"></div>
         </div>
     `;
-    
+
     const progressBar = document.getElementById('batchProgress');
     const statusDiv = document.getElementById('batchStatus');
     const resultsContainer = document.getElementById('batchResults');
-    
+
     let successCount = 0;
     let failCount = 0;
-    
+
     // 逐个导入
     for (let i = 0; i < urls.length; i++) {
         const url = urls[i];
         const progress = ((i + 1) / urls.length) * 100;
-        
+
         progressBar.style.width = `${progress}%`;
         statusDiv.textContent = `正在导入第 ${i + 1}/${urls.length} 本书籍...`;
-        
+
         try {
             let finalSourceId = sourceId;
-            
+
             // 智能识别书源
             if (autoDetect && !sourceId) {
                 finalSourceId = await detectBookSource(url);
             }
-            
+
             if (finalSourceId) {
                 const response = await fetch('/api/sources/import', {
                     method: 'POST',
@@ -1117,7 +1406,7 @@ async function batchImportFromUrls() {
                         book_url: url
                     })
                 });
-                
+
                 if (response.ok) {
                     successCount++;
                     const result = await response.json();
@@ -1151,25 +1440,25 @@ async function batchImportFromUrls() {
                 </div>
             `;
         }
-        
+
         // 避免请求过快
         if (i < urls.length - 1) {
             await new Promise(resolve => setTimeout(resolve, 1000));
         }
     }
-    
+
     // 显示最终结果
     statusDiv.innerHTML = `
         <strong>批量导入完成！</strong><br>
         成功: ${successCount} 本，失败: ${failCount} 本
     `;
-    
+
     progressBar.classList.remove('progress-bar');
     progressBar.classList.add(successCount > failCount ? 'bg-success' : 'bg-warning');
-    
+
     // 清空输入框
     document.getElementById('batchUrls').value = '';
-    
+
     // 刷新书架
     if (typeof loadBooks === 'function') {
         setTimeout(loadBooks, 2000);
@@ -1195,12 +1484,12 @@ async function pasteFromClipboard() {
 async function previewBookInfo() {
     const bookUrl = document.getElementById('bookUrl').value.trim();
     const sourceId = document.getElementById('urlSource').value;
-    
+
     if (!bookUrl || !sourceId) {
         showAlert('请输入URL并选择书源', 'warning');
         return;
     }
-    
+
     try {
         // 这里可以添加预览功能的API调用
         showAlert('预览功能待实现', 'info');
@@ -1213,7 +1502,7 @@ async function previewBookInfo() {
 function handleUrlPaste(event) {
     setTimeout(() => {
         validateBookUrl();
-        
+
         // 如果启用了智能识别，自动检测书源
         const autoDetect = document.getElementById('autoDetectSource');
         if (autoDetect && autoDetect.checked) {
@@ -1230,25 +1519,25 @@ function validateBookUrl() {
     const urlInput = document.getElementById('bookUrl');
     const validation = document.getElementById('urlValidation');
     const url = urlInput.value.trim();
-    
+
     if (!url) {
         validation.textContent = '';
         urlInput.classList.remove('is-valid', 'is-invalid');
         return;
     }
-    
+
     try {
         const urlObj = new URL(url);
         const hostname = urlObj.hostname;
-        
+
         // 检查是否是常见的小说网站
         const commonSites = [
             'qidian.com', 'zongheng.com', 'jjwxc.net', 'biquge.com',
             'hongxiu.com', 'xxsy.net', 'readnovel.com', 'shuhai.com'
         ];
-        
+
         const isKnownSite = commonSites.some(site => hostname.includes(site));
-        
+
         if (isKnownSite) {
             validation.innerHTML = `<i class="bi bi-check-circle text-success"></i> 识别为小说网站: ${hostname}`;
             urlInput.classList.remove('is-invalid');
@@ -1290,7 +1579,7 @@ function fillExampleUrl(type) {
         biquge: 'https://www.biquge.com/book/12345/',
         jjwxc: 'http://www.jjwxc.net/onebook.php?novelid=123456'
     };
-    
+
     const url = examples[type];
     if (url) {
         document.getElementById('bookUrl').value = url;
@@ -1318,7 +1607,7 @@ document.addEventListener('keydown', function(event) {
             }, 100);
         }
     }
-    
+
     // Enter键快速导入
     if (event.key === 'Enter') {
         const activeElement = document.activeElement;
@@ -1337,7 +1626,7 @@ function showBatchExample() {
         'http://book.zongheng.com/book/878590.html',
         'http://www.jjwxc.net/onebook.php?novelid=123456'
     ];
-    
+
     document.getElementById('batchUrls').value = examples.join('\n');
     updateUrlCount();
     showAlert('已填充示例URL，请根据需要修改', 'info');
@@ -1371,11 +1660,11 @@ document.addEventListener('DOMContentLoaded', function() {
 function validateBatchUrls() {
     const batchUrls = document.getElementById('batchUrls').value.trim();
     if (!batchUrls) return { valid: [], invalid: [] };
-    
+
     const urls = batchUrls.split('\n').map(url => url.trim()).filter(url => url.length > 0);
     const valid = [];
     const invalid = [];
-    
+
     urls.forEach(url => {
         try {
             new URL(url);
@@ -1384,25 +1673,25 @@ function validateBatchUrls() {
             invalid.push(url);
         }
     });
-    
+
     return { valid, invalid };
 }
 
 // 导入前验证
 function validateBeforeBatchImport() {
     const { valid, invalid } = validateBatchUrls();
-    
+
     if (invalid.length > 0) {
         const message = `发现 ${invalid.length} 个无效URL:\n${invalid.slice(0, 5).join('\n')}${invalid.length > 5 ? '\n...' : ''}`;
         if (!confirm(`${message}\n\n是否继续导入有效的 ${valid.length} 个URL？`)) {
             return false;
         }
-        
+
         // 只保留有效URL
         document.getElementById('batchUrls').value = valid.join('\n');
         updateUrlCount();
     }
-    
+
     return valid.length > 0;
 }
 
@@ -1412,19 +1701,19 @@ async function batchImportFromUrls() {
         showAlert('没有有效的URL可以导入', 'warning');
         return;
     }
-    
+
     const batchUrls = document.getElementById('batchUrls').value.trim();
     const sourceId = document.getElementById('urlSource').value;
     const autoDetect = document.getElementById('autoDetectSource').checked;
-    
+
     const urls = batchUrls.split('\n')
         .map(url => url.trim())
         .filter(url => url.length > 0);
-    
+
     if (!confirm(`确定要导入 ${urls.length} 本书籍吗？\n\n${autoDetect ? '将自动识别书源' : '使用选定的书源'}`)) {
         return;
     }
-    
+
     // 显示批量导入进度
     const resultsDiv = document.getElementById('searchResults');
     resultsDiv.innerHTML = `
@@ -1436,41 +1725,41 @@ async function batchImportFromUrls() {
                 </button>
             </div>
             <div class="progress mb-2">
-                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                <div class="progress-bar progress-bar-striped progress-bar-animated"
                      role="progressbar" style="width: 0%" id="batchProgress"></div>
             </div>
             <div id="batchStatus">准备导入 ${urls.length} 本书籍...</div>
             <div id="batchResults" class="mt-2" style="max-height: 200px; overflow-y: auto;"></div>
         </div>
     `;
-    
+
     const progressBar = document.getElementById('batchProgress');
     const statusDiv = document.getElementById('batchStatus');
     const resultsContainer = document.getElementById('batchResults');
-    
+
     let successCount = 0;
     let failCount = 0;
     let cancelled = false;
-    
+
     // 设置取消标志
     window.batchImportCancelled = false;
-    
+
     // 逐个导入
     for (let i = 0; i < urls.length && !window.batchImportCancelled; i++) {
         const url = urls[i];
         const progress = ((i + 1) / urls.length) * 100;
-        
+
         progressBar.style.width = `${progress}%`;
         statusDiv.textContent = `正在导入第 ${i + 1}/${urls.length} 本书籍...`;
-        
+
         try {
             let finalSourceId = sourceId;
-            
+
             // 智能识别书源
             if (autoDetect && !sourceId) {
                 finalSourceId = await detectBookSource(url);
             }
-            
+
             if (finalSourceId) {
                 const response = await fetch('/api/sources/import', {
                     method: 'POST',
@@ -1482,7 +1771,7 @@ async function batchImportFromUrls() {
                         book_url: url
                     })
                 });
-                
+
                 if (response.ok) {
                     successCount++;
                     const result = await response.json();
@@ -1516,36 +1805,36 @@ async function batchImportFromUrls() {
                 </div>
             `;
         }
-        
+
         // 滚动到最新结果
         resultsContainer.scrollTop = resultsContainer.scrollHeight;
-        
+
         // 避免请求过快
         if (i < urls.length - 1) {
             await new Promise(resolve => setTimeout(resolve, 1000));
         }
     }
-    
+
     // 显示最终结果
     const finalStatus = window.batchImportCancelled ? '批量导入已取消' : '批量导入完成！';
     statusDiv.innerHTML = `
         <strong>${finalStatus}</strong><br>
         成功: ${successCount} 本，失败: ${failCount} 本
     `;
-    
+
     progressBar.classList.remove('progress-bar-animated', 'progress-bar-striped');
     progressBar.classList.add(successCount > failCount ? 'bg-success' : 'bg-warning');
-    
+
     // 隐藏取消按钮
     const cancelBtn = document.getElementById('cancelBtn');
     if (cancelBtn) cancelBtn.style.display = 'none';
-    
+
     // 清空输入框
     if (!window.batchImportCancelled) {
         document.getElementById('batchUrls').value = '';
         updateUrlCount();
     }
-    
+
     // 刷新书架
     if (typeof loadBooks === 'function') {
         setTimeout(loadBooks, 2000);

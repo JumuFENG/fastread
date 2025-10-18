@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+
+{% block title %}用户管理 - FastRead{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>用户管理</h2>
+            <div class="btn-group">
+                <button class="btn btn-outline-primary" onclick="refreshUsers()">
+                    <i class="bi bi-arrow-clockwise"></i> 刷新
+                </button>
+                <button class="btn btn-outline-success" onclick="exportUsers()">
+                    <i class="bi bi-download"></i> 导出
+                </button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h5 class="mb-0">注册用户列表</h5>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="userSearch" 
+                                   placeholder="搜索用户名或邮箱">
+                            <button class="btn btn-outline-secondary" onclick="searchUsers()">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="usersTable">
+                    <!-- 用户列表将通过JavaScript加载 -->
+                </div>
+                
+                <div id="loading" class="text-center d-none">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">加载中...</span>
+                    </div>
+                </div>
+                
+                <div id="noUsers" class="text-center text-muted d-none">
+                    <i class="bi bi-people display-4"></i>
+                    <p class="mt-3">暂无注册用户</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 用户详情模态框 -->
+<div class="modal fade" id="userDetailModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">用户详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="userDetailContent">
+                <!-- 用户详情内容 -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 检查是否有管理员权限（简单实现）
+    const token = localStorage.getItem('token');
+    if (!token) {
+        showAlert('请先登录', 'warning');
+        window.location.href = '/auth';
+        return;
+    }
+    
+    loadUsers();
+    
+    // 搜索框回车事件
+    document.getElementById('userSearch').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            searchUsers();
+        }
+    });
+});
+
+// 加载用户列表
+async function loadUsers() {
+    const loading = document.getElementById('loading');
+    const usersTable = document.getElementById('usersTable');
+    const noUsers = document.getElementById('noUsers');
+    
+    loading.classList.remove('d-none');
+    usersTable.innerHTML = '';
+    noUsers.classList.add('d-none');
+    
+    try {
+        // 注意：这里需要一个管理员API，目前使用模拟数据
+        const users = await getMockUsers();
+        
+        loading.classList.add('d-none');
+        
+        if (users.length === 0) {
+            noUsers.classList.remove('d-none');
+            return;
+        }
+        
+        usersTable.innerHTML = `
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>用户名</th>
+                            <th>邮箱</th>
+                            <th>状态</th>
+                            <th>注册时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${users.map(user => `
+                            <tr>
+                                <td>${user.id}</td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                                            ${user.username.charAt(0).toUpperCase()}
+                                        </div>
+                                        ${user.username}
+                                    </div>
+                                </td>
+                                <td>${user.email}</td>
+                                <td>
+                                    <span class="badge ${user.is_active ? 'bg-success' : 'bg-secondary'}">
+                                        ${user.is_active ? '活跃' : '禁用'}
+                                    </span>
+                                </td>
+                                <td>${formatDate(user.created_at)}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-info" onclick="showUserDetail(${user.id})" title="查看详情">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        <button class="btn btn-outline-warning" onclick="toggleUserStatus(${user.id})" title="切换状态">
+                                            <i class="bi bi-power"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+    } catch (error) {
+        loading.classList.add('d-none');
+        console.error('加载用户列表失败:', error);
+        showAlert('加载用户列表失败', 'danger');
+    }
+}
+
+// 获取模拟用户数据（实际应用中应该调用API）
+async function getMockUsers() {
+    // 模拟API延迟
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    return [
+        {
+            id: 1,
+            username: 'admin',
+            email: 'admin@example.com',
+            is_active: true,
+            created_at: '2024-01-01T00:00:00Z'
+        },
+        {
+            id: 2,
+            username: 'testuser',
+            email: 'test@example.com',
+            is_active: true,
+            created_at: '2024-01-02T00:00:00Z'
+        }
+    ];
+}
+
+// 搜索用户
+async function searchUsers() {
+    const keyword = document.getElementById('userSearch').value.trim();
+    
+    if (!keyword) {
+        loadUsers();
+        return;
+    }
+    
+    // 这里应该调用搜索API
+    showAlert('搜索功能待实现', 'info');
+}
+
+// 刷新用户列表
+function refreshUsers() {
+    loadUsers();
+    showAlert('用户列表已刷新', 'success');
+}
+
+// 显示用户详情
+async function showUserDetail(userId) {
+    const modal = new bootstrap.Modal(document.getElementById('userDetailModal'));
+    const content = document.getElementById('userDetailContent');
+    
+    content.innerHTML = '<div class="text-center"><div class="spinner-border"></div></div>';
+    modal.show();
+    
+    try {
+        // 模拟获取用户详情
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const user = {
+            id: userId,
+            username: 'testuser',
+            email: 'test@example.com',
+            is_active: true,
+            created_at: '2024-01-02T00:00:00Z',
+            last_login: '2024-01-10T12:00:00Z',
+            books_count: 5,
+            reading_progress: [
+                { book_title: '测试小说1', progress: '第10章' },
+                { book_title: '测试小说2', progress: '第5章' }
+            ]
+        };
+        
+        content.innerHTML = `
+            <div class="row">
+                <div class="col-md-4 text-center">
+                    <div class="avatar-lg bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 80px; height: 80px; font-size: 2rem;">
+                        ${user.username.charAt(0).toUpperCase()}
+                    </div>
+                    <h5>${user.username}</h5>
+                    <p class="text-muted">${user.email}</p>
+                </div>
+                <div class="col-md-8">
+                    <table class="table table-borderless">
+                        <tr>
+                            <td><strong>用户ID:</strong></td>
+                            <td>${user.id}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>状态:</strong></td>
+                            <td>
+                                <span class="badge ${user.is_active ? 'bg-success' : 'bg-secondary'}">
+                                    ${user.is_active ? '活跃' : '禁用'}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>注册时间:</strong></td>
+                            <td>${formatDate(user.created_at)}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>最后登录:</strong></td>
+                            <td>${formatDate(user.last_login)}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>书籍数量:</strong></td>
+                            <td>${user.books_count} 本</td>
+                        </tr>
+                    </table>
+                    
+                    <h6 class="mt-3">阅读进度</h6>
+                    <div class="list-group list-group-flush">
+                        ${user.reading_progress.map(item => `
+                            <div class="list-group-item px-0">
+                                <div class="d-flex justify-content-between">
+                                    <span>${item.book_title}</span>
+                                    <small class="text-muted">${item.progress}</small>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+    } catch (error) {
+        content.innerHTML = '<div class="text-center text-danger">加载用户详情失败</div>';
+    }
+}
+
+// 切换用户状态
+async function toggleUserStatus(userId) {
+    if (!confirm('确定要切换用户状态吗？')) {
+        return;
+    }
+    
+    try {
+        // 这里应该调用API切换用户状态
+        showAlert('用户状态切换成功', 'success');
+        loadUsers();
+    } catch (error) {
+        showAlert('操作失败', 'danger');
+    }
+}
+
+// 导出用户数据
+function exportUsers() {
+    showAlert('导出功能待实现', 'info');
+}
+
+// 格式化日期
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+</script>
+
+<style>
+.avatar-sm {
+    width: 32px;
+    height: 32px;
+    font-size: 0.875rem;
+}
+
+.avatar-lg {
+    width: 64px;
+    height: 64px;
+    font-size: 1.5rem;
+}
+</style>
+{% endblock %}

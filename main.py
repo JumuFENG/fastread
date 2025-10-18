@@ -27,6 +27,14 @@ app.include_router(sources.router, prefix="/api/sources", tags=["书源管理"])
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
+@app.get("/auth", response_class=HTMLResponse)
+async def auth_page(request: Request):
+    return templates.TemplateResponse("auth.html", {"request": request})
+
+@app.get("/users", response_class=HTMLResponse)
+async def users_page(request: Request):
+    return templates.TemplateResponse("users.html", {"request": request})
+
 @app.get("/book/{book_id}", response_class=HTMLResponse)
 async def read_book(request: Request, book_id: int):
     return templates.TemplateResponse("reader.html", {"request": request, "book_id": book_id})
