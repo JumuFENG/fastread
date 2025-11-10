@@ -43,7 +43,7 @@ body {
 }
 
 .chapter-text p {
-    margin-bottom: 1em;
+    margin-bottom: 0.5em;
 }
 
 /* 章节列表样式 */
@@ -646,18 +646,12 @@ body {
 }
 
 /* 章节内容样式优化 */
-.chapter-text p {
-    margin-bottom: 1.2em;
-    line-height: 1.8;
-    text-indent: 2em;
-}
-
 .chapter-text p:first-child {
     margin-top: 0;
 }
 
 .chapter-text p:last-child {
-    margin-bottom: 0;
+    margin-bottom: 1.5em;
 }
 
 /* 实时获取标识 */
@@ -976,25 +970,6 @@ body.offline::before {
     transition: all 0.3s ease;
 }
 
-/* 阅读器响应式设计 */
-@media (max-width: 768px) {
-    .reader-toolbar {
-        top: 10px;
-        right: 10px;
-        padding: 6px;
-    }
-
-    .floating-panel {
-        top: 110px;
-        right: 10px;
-        left: 10px;
-        width: auto;
-    }
-
-    .panel-body {
-        padding: 12px;
-    }
-}
 /* 摘录功能样式 */
 .excerpt-item {
     background: #f8f9fa;
@@ -1141,24 +1116,24 @@ body.offline::before {
 /* 响应式设计 */
 @media (max-width: 768px) {
     .reader-toolbar {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        top: auto;
+        top: 10px;
+        right: 10px;
+        padding: 6px;
         flex-direction: row;
         flex-wrap: wrap;
-        max-width: 200px;
     }
-    
+
     .floating-panel {
-        position: fixed;
-        top: 10px;
-        left: 10px;
+        top: 110px;
         right: 10px;
-        max-height: 80vh;
-        z-index: 1050;
+        left: 10px;
+        width: auto;
     }
-    
+
+    .panel-body {
+        padding: 12px;
+    }
+
     /* 设置面板在移动端显示为页面内容而不是浮动 */
     #settingsPanel {
         position: static !important;

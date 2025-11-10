@@ -1206,33 +1206,6 @@
         }
     }
 
-    function loadExcerpts() {
-        const container = document.getElementById('excerptsList');
-        if (excerpts.length === 0) {
-            container.innerHTML = '<div class="text-muted text-center">暂无摘录</div>';
-            return;
-        }
-
-        const html = excerpts.map(excerpt => `
-            <div class="excerpt-item">
-                <div class="excerpt-text">${excerpt.text}</div>
-                <div class="excerpt-meta">
-                    <span>${excerpt.bookTitle} - ${excerpt.chapter}</span>
-                    <div>
-                        <small class="text-muted">${excerpt.timestamp}</small>
-                        <button class="btn btn-outline-danger btn-sm ms-2" onclick="removeExcerpt(${excerpt.id})">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-
-        container.innerHTML = html;
-    }
-
-
-
     // 章节跳转功能
     function showChapterJump() {
         const modal = document.createElement('div');

@@ -228,7 +228,10 @@ class BaseBookSourceParser(ABC):
                     books += await self.parse_search_results(soup)
                     if limit > 0 and len(books) >= limit:
                         break
-                    page_url = self.get_next_search_page(soup, search_url)
+                    next_url = self.get_next_search_page(soup, search_url)
+                    if not next_url or next_url == page_url:
+                        break
+                    page_url = next_url
 
                 return books
 
@@ -378,7 +381,7 @@ class BaseBookSourceParser(ABC):
         if not self.next_search_page_selector:
             return None
 
-        next_page_elem = soup.select_one('.pager a.pager-next')
+        next_page_elem = soup.select_one(self.next_search_page_selector)
         if next_page_elem and next_page_elem.get('href'):
             return self.build_full_url(next_page_elem.get('href'), search_url)
         return None
@@ -587,7 +590,7 @@ class BaseBookSourceParser(ABC):
         """从元素中提取书籍URL"""
         for selector in self.search_title_selectors:
             title_elem = element.select_one(selector)
-            if title_elem:
+            if title_elem and title_elem.get('href'):
                 return self.build_full_url(title_elem.get('href'), self.base_url)
 
         link = element.find('a', href=True)

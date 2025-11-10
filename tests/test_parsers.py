@@ -13,77 +13,16 @@ async def test_network(url):
     bk = await parser.get_book_info(url)
     print(bk.title, bk.author, bk.description, bk.cover_url)
 
-async def test_parsers():
-    """测试解析器功能"""
-    
-    # 测试配置
-    test_configs = [
-        {
-            'name': '笔趣阁',
-            'url': 'https://www.biquge.com',
-            'search_url': 'https://www.biquge.com/search?q={keyword}',
-            'book_url_pattern': '',
-            'chapter_url_pattern': '',
-            'content_selector': '#content'
-        },
-        {
-            'name': '起点中文网',
-            'url': 'https://www.qidian.com',
-            'search_url': 'https://www.qidian.com/search?kw={keyword}',
-            'book_url_pattern': '',
-            'chapter_url_pattern': '',
-            'content_selector': '.read-content'
-        },
-        {
-            'name': '未知书源',
-            'url': 'https://unknown.com',
-            'search_url': 'https://unknown.com/search?q={keyword}',
-            'book_url_pattern': '',
-            'chapter_url_pattern': '',
-            'content_selector': '.content'
-        }
-    ]
-
-    print("=== 书源解析器测试 ===\n")
-    
-    for config in test_configs:
-        print(f"测试书源: {config['name']}")
-        print(f"URL: {config['url']}")
-        
-        # 测试根据书源名称获取解析器
-        parser = get_parser_for_source(config['name'], config)
-        print(f"根据名称匹配的解析器: {parser.__class__.__name__}")
-        
-        # 测试根据URL获取解析器
-        parser_by_url = get_parser_for_url(config['url'], config)
-        print(f"根据URL匹配的解析器: {parser_by_url.__class__.__name__}")
-        
-
-        print("-" * 50)
-    
-    # 测试特定URL匹配
-    print("\n=== URL匹配测试 ===")
-    test_urls = [
-        'https://www.biquge.com/book/12345/',
-        'https://book.qidian.com/info/1234567',
-        'https://www.unknown-site.com/novel/123',
-        'https://xbiquge.com/book/456/'
-    ]
-    
-    base_config = {
-        'name': 'test',
-        'url': '',
-        'search_url': '',
-        'book_url_pattern': '',
-        'chapter_url_pattern': '',
-        'content_selector': '.content'
-    }
-    
-    for url in test_urls:
-        parser = get_parser_for_url(url, base_config)
-        print(f"URL: {url}")
-        print(f"匹配的解析器: {parser.__class__.__name__}")
-        print("-" * 30)
+async def test_base_parser():
+    parser = get_parser_for_source('xbiquge77',{'name': 'xbiquge77', 'url': 'https://www.xbiquge77.com/'})
+    test_book_url = 'https://www.xbiquge77.com/72862'
+    # book_info = await parser.get_book_info(test_book_url)
+    # print(book_info)
+    bchapters = await parser.get_chapter_list(test_book_url)
+    print(len(bchapters))
+    test_chapter_url = 'https://www.xbiquge77.com/72862/1'
+    chapter_content = await parser.get_chapter_content(test_chapter_url)
+    print(chapter_content)
 
 async def test_crxs():
     # parser = get_parser_for_source('crxs')
@@ -215,9 +154,23 @@ async def test_qidiy():
     chapter_content = await parser.get_chapter_content(test_chapter_url)
     print(chapter_content)
 
+async def test_jszj():
+    parser = get_parser_for_source('jszj')
+    sr = await parser.search_books('同事', 0)
+    print(sr, len(sr))
+    # test_book_url = 'http://www.jinshuzhijia.com/index.php/book/info/chuanyuedazhouwutangfengliu'
+    # book_info = await parser.get_book_info(test_book_url)
+    # print(book_info)
+    # bchapters = await parser.get_chapter_list(test_book_url)
+    # print(len(bchapters))
+    # test_chapter_url = 'http://www.jinshuzhijia.com/index.php/book/read/728/222'
+    # chapter_content = await parser.get_chapter_content(test_chapter_url)
+    # print(chapter_content)
+
 if __name__ == "__main__":
-    # asyncio.run(test_network('http://www.qidiy.com/book/104934/47845191.html'))
-    asyncio.run(test_qidiy())
+    # asyncio.run(test_network('https://www.xbiquge77.com/72862'))
+    asyncio.run(test_base_parser())
+    # asyncio.run(test_jszj())
     # asyncio.run(test_dybz())
     # from urllib.parse import urlparse
     # next_sec = 'https://xszj.org/b/413589/c/5786882?page=2'
