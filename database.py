@@ -20,19 +20,6 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-class BookSource(Base):
-    __tablename__ = "book_sources"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
-    url = Column(String)
-    search_url = Column(String)
-    book_url_pattern = Column(String)
-    chapter_url_pattern = Column(String)
-    content_selector = Column(String)
-    is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
 class Book(Base):
     __tablename__ = "books"
     
@@ -41,14 +28,13 @@ class Book(Base):
     author = Column(String)
     description = Column(Text)
     cover_url = Column(String)
-    source_id = Column(Integer, ForeignKey("book_sources.id"))
+    source_id = Column(String)
     source_url = Column(String)
     total_chapters = Column(Integer, default=0)
     is_completed = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow)
     
-    source = relationship("BookSource")
     chapters = relationship("Chapter", back_populates="book")
 
 class Chapter(Base):

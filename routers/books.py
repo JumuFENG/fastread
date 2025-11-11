@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from database import get_db, Book, Chapter, BookSource
+from database import get_db, Book, Chapter
 from pydantic import BaseModel
 from datetime import datetime
 import httpx
@@ -40,25 +40,13 @@ class BookCreate(BaseModel):
     author: str
     description: str
     cover_url: Optional[str] = None
-    source_id: int
+    source_id: str
     source_url: str
 
-def get_parser_for_book(book: Book, db: Session):
-    source = db.query(BookSource).filter(BookSource.id == book.source_id).first()
-    if source:
-        source_config = {
-            'name': source.name,
-            'url': source.url,
-            'search_url': source.search_url,
-            'book_url_pattern': source.book_url_pattern,
-            'chapter_url_pattern': source.chapter_url_pattern,
-            'content_selector': source.content_selector
-        }
-        parser = get_parser_for_source(source.name, source_config)
-    else:
-        parser = get_parser_for_url(book.source_url, {})
-
-    return parser
+def get_parser_for_book(book: Book):
+    if book.source_id and isinstance(book.source_id, str):
+        return get_parser_for_source(book.source_id)
+    return get_parser_for_url(book.source_url, {})
 
 @router.get("/", response_model=List[BookResponse])
 async def get_books(
@@ -150,7 +138,7 @@ async def update_book_chapters(book_id: int, db: Session = Depends(get_db)):
 
     # 更新章节列表
     try:
-        parser = get_parser_for_book(book, db)
+        parser = get_parser_for_book(book)
         chapters = await parser.update_chapter_list(book.source_url, book.total_chapters)
         existing_chapter_numbers = {c.chapter_number for c in db.query(Chapter).filter(Chapter.book_id == book_id).all()}
         new_chapters = []
@@ -191,7 +179,7 @@ async def fetch_chapter_content_realtime(chapter: Chapter, db: Session) -> str:
 
         print(f"书籍信息: {book.title} (源ID: {book.source_id})")
 
-        parser = get_parser_for_book(book, db)
+        parser = get_parser_for_book(book)
         # 使用解析器获取章节内容
         content = await parser.get_chapter_content(chapter.source_url)
 
@@ -286,87 +274,3 @@ async def batch_preload_chapters(
         "total": len(chapters),
         "results": results
     }
-# 调试章节内容获取
-@router.get("/debug/{book_id}/chapters/{chapter_number}")
-async def debug_chapter_content(book_id: int, chapter_number: int, db: Session = Depends(get_db)):
-    """调试章节内容获取"""
-    chapter = db.query(Chapter).filter(
-        Chapter.book_id == book_id,
-        Chapter.chapter_number == chapter_number
-    ).first()
-
-    if not chapter:
-        raise HTTPException(status_code=404, detail="章节不存在")
-
-    try:
-        # 获取书籍和书源信息
-        book = db.query(Book).filter(Book.id == chapter.book_id).first()
-        source = db.query(BookSource).filter(BookSource.id == book.source_id).first()
-
-        # 获取页面内容进行分析
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
-
-            response = await client.get(chapter.source_url, headers=headers)
-            soup = BeautifulSoup(response.text, 'html.parser')
-
-            # 分析页面结构
-            analysis = {
-                "chapter_info": {
-                    "id": chapter.id,
-                    "title": chapter.title,
-                    "url": chapter.source_url,
-                    "chapter_number": chapter.chapter_number
-                },
-                "book_info": {
-                    "title": book.title,
-                    "author": book.author
-                },
-                "source_info": {
-                    "name": source.name,
-                    "content_selector": source.content_selector
-                },
-                "page_analysis": {
-                    "status_code": response.status_code,
-                    "page_title": soup.find('title').text if soup.find('title') else None,
-                    "page_size": len(response.text),
-                    "has_content_div": bool(soup.find('div', class_='content')),
-                    "has_text_div": bool(soup.find('div', class_='text')),
-                    "has_chaptercontent_id": bool(soup.find(id='chaptercontent')),
-                    "paragraph_count": len(soup.find_all('p')),
-                    "div_count": len(soup.find_all('div'))
-                },
-                "selector_test": {}
-            }
-
-            # 测试各种选择器
-            test_selectors = [
-                '.content', '#content', '.chapter-content', '.text',
-                '.novel-content', '.read-content', '.chapter_content',
-                '.txt', '.chapter-txt', '#chaptercontent'
-            ]
-
-            if source.content_selector:
-                test_selectors = [s.strip() for s in source.content_selector.split(',')] + test_selectors
-
-            for selector in test_selectors:
-                try:
-                    element = soup.select_one(selector)
-                    if element:
-                        text = element.get_text().strip()
-                        analysis["selector_test"][selector] = {
-                            "found": True,
-                            "text_length": len(text),
-                            "preview": text[:200] + "..." if len(text) > 200 else text
-                        }
-                    else:
-                        analysis["selector_test"][selector] = {"found": False}
-                except Exception as e:
-                    analysis["selector_test"][selector] = {"error": str(e)}
-
-            return analysis
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"调试失败: {str(e)}")

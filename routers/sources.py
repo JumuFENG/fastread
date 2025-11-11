@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List, Union
-from database import get_db, BookSource, Book, Chapter
+from database import get_db, Book, Chapter
 from pydantic import BaseModel
 import json
 from parsers.parser_loader import BaseBookSourceParser, get_parser_for_source, get_parser_for_url, list_available_parsers

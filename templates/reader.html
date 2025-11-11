@@ -123,17 +123,6 @@
                     <button type="button" class="btn-close" onclick="hideAllPanels()" aria-label="关闭"></button>
                 </div>
                 <div class="panel-body">
-                    <div class="mb-3">
-                        <button class="btn btn-primary btn-sm" onclick="saveSelectedText()">
-                            <i class="bi bi-plus"></i> 保存选中文本
-                        </button>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="loadServerExcerpts()">
-                            <i class="bi bi-cloud-download"></i> 加载服务器摘录
-                        </button>
-                        <button class="btn btn-outline-danger btn-sm" onclick="clearExcerpts()">
-                            <i class="bi bi-trash"></i> 清空本地摘录
-                        </button>
-                    </div>
                     <div id="excerptsList" class="excerpts-list">
                         <!-- 摘录列表 -->
                     </div>
@@ -365,50 +354,50 @@
     let lastSavedProgress = null; // 跟踪上次保存的进度
     let chapterDisplayRange = { start: 0, end: 20 }; // 默认显示前20章
     const CHAPTER_DISPLAY_COUNT = 20; // 每次显示的章节数量
-    let excerpts = JSON.parse(localStorage.getItem('excerpts') || '[]');
-    let sensitiveWords = JSON.parse(localStorage.getItem('sensitiveWords') || '{}');
+    let excerpts = [];
+    let sensitiveWords = {};
     let autoScrollEnabled = false;
     let autoScrollSpeed = 30;
 
     document.addEventListener('DOMContentLoaded', function () {
-        const bookId = {{ book_id | tojson
-    }};
-    console.log('阅读器初始化，书籍ID:', bookId);
+        const bookId = {{ book_id | tojson }};
 
-    loadBook(bookId);
-    loadChapters(bookId).then(() => {
-        loadReadingProgress(bookId);
-    });
+        loadSensitiveWords();
+        loadBook(bookId);
+        loadChapters(bookId).then(() => {
+            loadExcerpts();
+            loadReadingProgress(bookId);
+        });
 
-    // 加载阅读设置
-    loadReaderSettings();
+        // 加载阅读设置
+        loadReaderSettings();
 
-    // 键盘导航
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'ArrowLeft') {
-            prevChapter();
-        } else if (e.key === 'ArrowRight') {
-            nextChapter();
-        } else if (e.key === 'Escape') {
-            // ESC键关闭所有面板
-            hideAllPanels();
-        }
-    });
-
-    // 窗口大小变化监听
-    window.addEventListener('resize', function () {
-        const isMobile = window.innerWidth <= 768;
-        const settingsPanel = document.getElementById('settingsPanel');
-
-        if (!settingsPanel.classList.contains('d-none')) {
-            if (isMobile) {
-                document.body.classList.add('mobile-settings-active');
-            } else {
-                document.body.classList.remove('mobile-settings-active');
+        // 键盘导航
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'ArrowLeft') {
+                prevChapter();
+            } else if (e.key === 'ArrowRight') {
+                nextChapter();
+            } else if (e.key === 'Escape') {
+                // ESC键关闭所有面板
+                hideAllPanels();
             }
-        }
+        });
+
+        // 窗口大小变化监听
+        window.addEventListener('resize', function () {
+            const isMobile = window.innerWidth <= 768;
+            const settingsPanel = document.getElementById('settingsPanel');
+
+            if (!settingsPanel.classList.contains('d-none')) {
+                if (isMobile) {
+                    document.body.classList.add('mobile-settings-active');
+                } else {
+                    document.body.classList.remove('mobile-settings-active');
+                }
+            }
+        });
     });
-});
 
     async function loadBook(bookId) {
         try {
@@ -795,7 +784,7 @@
         hideAllPanels();
         const panel = document.getElementById('excerptsPanel');
         panel.classList.toggle('d-none');
-        loadExcerpts();
+        displayExcerpts(excerpts)
     }
 
     function toggleTemplates() {
@@ -833,7 +822,7 @@
         hideAllPanels();
         const panel = document.getElementById('sensitiveWordsPanel');
         panel.classList.toggle('d-none');
-        loadSensitiveWords();
+        showSensitiveWords();
         applySensitiveWordFilter(currentBook.currentChapterData);
     }
 
@@ -905,6 +894,14 @@
         changeFont(font);
     }
 
+    function loadSensitiveWords() {
+        sensitiveWords = JSON.parse(localStorage.getItem('sensitiveWords') || '{}');
+    }
+
+    function saveSensitiveWords() {
+        localStorage.setItem('sensitiveWords', JSON.stringify(sensitiveWords));
+    }
+
     // 敏感词过滤功能
     function applySensitiveWordFilter(chapterData) {
         let filteredContent = chapterData.content;
@@ -957,20 +954,20 @@
         }
 
         sensitiveWords[currentBook.id].push({ original: originalWord, replacement: replacementWord, enabled: true });
-        localStorage.setItem('sensitiveWords', JSON.stringify(sensitiveWords));
+        saveSensitiveWords();
 
         document.getElementById('newSensitiveWord').value = '';
         document.getElementById('replacementWord').value = '';
 
-        loadSensitiveWords();
+        showSensitiveWords();
         showAlert('敏感词添加成功', 'success');
         applySensitiveWordFilter(currentBook.currentChapterData);
     }
 
     function toggleSensitiveWord(index) {
         sensitiveWords[currentBook.id][index].enabled = !sensitiveWords[currentBook.id][index].enabled;
-        localStorage.setItem('sensitiveWords', JSON.stringify(sensitiveWords));
-        loadSensitiveWords();
+        saveSensitiveWords();
+        showSensitiveWords();
         applySensitiveWordFilter(currentBook.currentChapterData);
     }
 
@@ -980,13 +977,13 @@
         }
 
         sensitiveWords[currentBook.id].splice(index, 1);
-        localStorage.setItem('sensitiveWords', JSON.stringify(sensitiveWords));
-        loadSensitiveWords();
+        saveSensitiveWords();
+        showSensitiveWords();
         showAlert('敏感词删除成功', 'success');
         applySensitiveWordFilter(currentBook.currentChapterData);
     }
 
-    function loadSensitiveWords() {
+    function showSensitiveWords() {
         const container = document.getElementById('sensitiveWordsList');
         if (!sensitiveWords[currentBook.id] || sensitiveWords[currentBook.id].length === 0) {
             container.innerHTML = '<div class="text-muted text-center">暂无敏感词</div>';
@@ -1130,22 +1127,7 @@
     async function saveExcerpt(text) {
         const token = localStorage.getItem('token');
 
-        if (!token) {
-            // 未登录用户保存到本地
-            const excerpt = {
-                id: Date.now(),
-                text: text,
-                chapter: chapters[currentChapterIndex]?.title || '未知章节',
-                chapterNumber: chapters[currentChapterIndex]?.chapter_number || 0,
-                bookTitle: currentBook?.title || '未知书籍',
-                timestamp: new Date().toLocaleString(),
-                local: true
-            };
-
-            excerpts.unshift(excerpt);
-            localStorage.setItem('excerpts', JSON.stringify(excerpts));
-            showAlert('摘录已保存到本地', 'success');
-        } else {
+        if (token) {
             // 登录用户保存到服务器
             try {
                 const response = await fetch('/api/excerpts/', {
@@ -1170,8 +1152,6 @@
             } catch (error) {
                 console.error('保存摘录失败:', error);
                 showAlert('保存摘录失败，已保存到本地', 'warning');
-                // 失败时保存到本地
-                saveExcerptLocally(text);
             }
         }
 
@@ -1186,22 +1166,20 @@
 
         // 如果摘录面板打开，刷新列表
         if (!document.getElementById('excerptsPanel').classList.contains('d-none')) {
-            loadExcerpts();
+            displayExcerpts(excerpts);
         }
     }
 
     function removeExcerpt(id) {
         excerpts = excerpts.filter(excerpt => excerpt.id !== id);
-        localStorage.setItem('excerpts', JSON.stringify(excerpts));
-        loadExcerpts();
+        displayExcerpts(excerpts);
         showAlert('摘录删除成功', 'success');
     }
 
     function clearExcerpts() {
         if (confirm('确定要清空所有摘录吗？')) {
             excerpts = [];
-            localStorage.setItem('excerpts', JSON.stringify(excerpts));
-            loadExcerpts();
+            displayExcerpts(excerpts);
             showAlert('摘录已清空', 'success');
         }
     }
@@ -1345,8 +1323,6 @@
 
         const token = localStorage.getItem('token');
         if (!token) {
-            // 保存到本地
-            saveExcerptLocally(selectedText);
             return;
         }
 
@@ -1368,7 +1344,7 @@
 
             if (response.ok) {
                 showAlert('摘录保存成功', 'success');
-                loadExcerpts();
+                displayExcerpts(excerpts);
                 selection.removeAllRanges();
             } else {
                 throw new Error('保存失败');
@@ -1376,28 +1352,10 @@
         } catch (error) {
             console.error('保存摘录失败:', error);
             showAlert('保存摘录失败，已保存到本地', 'warning');
-            saveExcerptLocally(selectedText);
         }
     }
 
-    function saveExcerptLocally(text) {
-        const excerpt = {
-            id: Date.now(),
-            book_id: currentBook.id,
-            chapter_id: chapters[currentChapterIndex].id,
-            content: text,
-            note: '',
-            created_at: new Date().toISOString(),
-            local: true
-        };
-
-        excerpts.push(excerpt);
-        localStorage.setItem('excerpts', JSON.stringify(excerpts));
-        loadExcerpts();
-        showAlert('摘录已保存到本地', 'success');
-    }
-
-    async function loadServerExcerpts() {
+    async function loadExcerpts() {
         const token = localStorage.getItem('token');
         if (!token) {
             showAlert('请先登录', 'warning');
@@ -1412,18 +1370,12 @@
             });
 
             if (response.ok) {
-                const serverExcerpts = await response.json();
-                displayExcerpts([...excerpts, ...serverExcerpts]);
-                showAlert(`加载了 ${serverExcerpts.length} 条服务器摘录`, 'success');
+                excerpts = await response.json();
             }
         } catch (error) {
             console.error('加载服务器摘录失败:', error);
             showAlert('加载服务器摘录失败', 'danger');
         }
-    }
-
-    function loadExcerpts() {
-        displayExcerpts(excerpts);
     }
 
     function displayExcerpts(excerptList) {
@@ -1453,8 +1405,7 @@
     async function deleteExcerpt(excerptId, isLocal) {
         if (isLocal) {
             excerpts = excerpts.filter(e => e.id !== excerptId);
-            localStorage.setItem('excerpts', JSON.stringify(excerpts));
-            loadExcerpts();
+            displayExcerpts(excerpts)
             showAlert('本地摘录删除成功', 'success');
             return;
         }
@@ -1472,7 +1423,8 @@
 
             if (response.ok) {
                 showAlert('摘录删除成功', 'success');
-                loadServerExcerpts();
+                await loadExcerpts();
+                displayExcerpts(excerpts);
             }
         } catch (error) {
             console.error('删除摘录失败:', error);
