@@ -109,6 +109,20 @@ class Rewrite(Base):
     book = relationship("Book")
     chapter = relationship("Chapter")
 
+class SensitiveWord(Base):
+    __tablename__ = "sensitive_words"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    book_id = Column(Integer, ForeignKey("books.id"))
+    original = Column(String, index=True)
+    replacement = Column(String)
+    enabled = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    user = relationship("User")
+    book = relationship("Book")
+
 def get_db():
     db = SessionLocal()
     try:
