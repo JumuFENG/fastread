@@ -137,37 +137,40 @@
                 </div>
                 <div class="panel-body">
                     <div class="mb-3">
-                        <button class="btn btn-primary btn-sm" onclick="createTemplateFromSelection()">
-                            <i class="bi bi-plus"></i> 从选中文本创建模板
-                        </button>
                         <button class="btn btn-outline-info btn-sm" onclick="loadUserTemplates()">
                             <i class="bi bi-list"></i> 我的模板
                         </button>
                     </div>
 
+                    <!-- 模板列表 -->
+                    <div id="templatesList">
+                        <!-- 模板列表 -->
+                    </div>
+
                     <!-- 创建模板表单 -->
                     <div id="createTemplateForm" class="d-none">
                         <div class="mb-3">
-                            <label class="form-label">模板名称</label>
+                            <label class="form-label">新建模板</label>
                             <input type="text" class="form-control" id="templateName" placeholder="输入模板名称">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">模板内容</label>
                             <textarea class="form-control" id="templateContent" rows="4" placeholder="模板内容"></textarea>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">关键词设置</label>
-                            <div id="keywordsList"></div>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="extractKeywords()">
-                                <i class="bi bi-search"></i> 自动提取关键词
-                            </button>
+                            <div id="keywordsList" class="d-flex flex-wrap gap-2"></div>
+                            <div class="mt-2 d-flex gap-2">
+                                <input type="text" class="form-control" id="customKeyword" placeholder="关键词" style="width: 100px;" autocomplete="off">
+                                <input type="text" class="form-control" id="customKeywordValue" placeholder="文本内容" style="width: 150px;" autocomplete="off">
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="addCustomKeyword()">
+                                    <i class="bi bi-plus"></i> 添加
+                                </button>
+                            </div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">标签</label>
                             <input type="text" class="form-control" id="templateTags" placeholder="输入标签，用逗号分隔">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">描述</label>
                             <textarea class="form-control" id="templateDescription" rows="2"
                                 placeholder="模板描述"></textarea>
                         </div>
@@ -175,15 +178,7 @@
                             <button class="btn btn-success btn-sm" onclick="saveTemplate()">
                                 <i class="bi bi-save"></i> 保存模板
                             </button>
-                            <button class="btn btn-secondary btn-sm" onclick="cancelCreateTemplate()">
-                                取消
-                            </button>
                         </div>
-                    </div>
-
-                    <!-- 模板列表 -->
-                    <div id="templatesList">
-                        <!-- 模板列表 -->
                     </div>
                 </div>
             </div>
@@ -360,44 +355,45 @@
     let autoScrollSpeed = 30;
 
     document.addEventListener('DOMContentLoaded', function () {
-        const bookId = {{ book_id | tojson }};
+        const bookId = {{ book_id | tojson
+    }};
 
-        loadBook(bookId).then(() => {
-            loadSensitiveWords();
-        });
-        loadChapters(bookId).then(() => {
-            loadExcerpts();
-            loadReadingProgress(bookId);
-        });
+    loadBook(bookId).then(() => {
+        loadSensitiveWords();
+    });
+    loadChapters(bookId).then(() => {
+        loadExcerpts();
+        loadReadingProgress(bookId);
+    });
 
-        // 加载阅读设置
-        loadReaderSettings();
+    // 加载阅读设置
+    loadReaderSettings();
 
-        // 键盘导航
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'ArrowLeft') {
-                prevChapter();
-            } else if (e.key === 'ArrowRight') {
-                nextChapter();
-            } else if (e.key === 'Escape') {
-                // ESC键关闭所有面板
-                hideAllPanels();
+    // 键盘导航
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowLeft') {
+            prevChapter();
+        } else if (e.key === 'ArrowRight') {
+            nextChapter();
+        } else if (e.key === 'Escape') {
+            // ESC键关闭所有面板
+            hideAllPanels();
+        }
+    });
+
+    // 窗口大小变化监听
+    window.addEventListener('resize', function () {
+        const isMobile = window.innerWidth <= 768;
+        const settingsPanel = document.getElementById('settingsPanel');
+
+        if (!settingsPanel.classList.contains('d-none')) {
+            if (isMobile) {
+                document.body.classList.add('mobile-settings-active');
+            } else {
+                document.body.classList.remove('mobile-settings-active');
             }
-        });
-
-        // 窗口大小变化监听
-        window.addEventListener('resize', function () {
-            const isMobile = window.innerWidth <= 768;
-            const settingsPanel = document.getElementById('settingsPanel');
-
-            if (!settingsPanel.classList.contains('d-none')) {
-                if (isMobile) {
-                    document.body.classList.add('mobile-settings-active');
-                } else {
-                    document.body.classList.remove('mobile-settings-active');
-                }
-            }
-        });
+        }
+    });
     });
 
     async function loadBook(bookId) {
@@ -799,6 +795,7 @@
         hideAllPanels();
         const panel = document.getElementById('templatesPanel');
         panel.classList.toggle('d-none');
+        createTemplateFromSelection();
         if (!panel.classList.contains('d-none')) {
             loadUserTemplates();
         }
@@ -910,7 +907,7 @@
                     'Authorization': `Bearer ${token}`
                 }
             });
-            
+
             if (response.ok) {
                 const serverWords = await response.json();
                 // 转换为原有格式
@@ -988,7 +985,7 @@
         }
 
         const token = localStorage.getItem('token');
-        
+
         if (token) {
             // 已登录，保存到服务器
             try {
@@ -1037,20 +1034,20 @@
     async function toggleSensitiveWord(index) {
         const word = sensitiveWords[currentBook.id][index];
         word.enabled = !word.enabled;
-        
+
         const token = localStorage.getItem('token');
-        
+
         if (token) {
             // 已登录且有ID，更新服务器
             try {
                 const url = `/api/sensitive-words/${word.id ? word.id : ''}`;
                 const method = word.id ? 'PUT' : 'POST';
-                const body = word.id ? {enabled: word.enabled} : {
-                        book_id: currentBook.id,
-                        original: word.original,
-                        replacement: word.replacement,
-                        enabled: word.enabled
-                    }
+                const body = word.id ? { enabled: word.enabled } : {
+                    book_id: currentBook.id,
+                    original: word.original,
+                    replacement: word.replacement,
+                    enabled: word.enabled
+                }
                 const response = await fetch(url, {
                     method,
                     headers: {
@@ -1082,7 +1079,7 @@
             // 未登录，保存到本地
             saveSensitiveWords();
         }
-        
+
         showSensitiveWords();
         applySensitiveWordFilter(currentBook.currentChapterData);
     }
@@ -1094,7 +1091,7 @@
 
         const word = sensitiveWords[currentBook.id][index];
         const token = localStorage.getItem('token');
-        
+
         if (token && word.id) {
             // 已登录且有ID，从服务器删除
             try {
@@ -1118,12 +1115,12 @@
 
         // 从本地数组中删除
         sensitiveWords[currentBook.id].splice(index, 1);
-        
+
         if (!token) {
             // 未登录，保存到本地存储
             saveSensitiveWords();
         }
-        
+
         showSensitiveWords();
         showAlert('敏感词删除成功', 'success');
         applySensitiveWordFilter(currentBook.currentChapterData);
@@ -1156,19 +1153,22 @@
     // 摘录功能
     function addTextSelectionListener() {
         document.addEventListener('mouseup', function (e) {
-            if (e.target.closest('.selection-tooltip')) {
+            if (e.target.closest('.selection-tooltip') || e.target.closest('.floating-panel')) {
                 return;
             }
             const selection = window.getSelection();
             if (selection.rangeCount > 0 && selection.toString().trim().length > 0) {
                 Promise.resolve().then(() => {
-                    showSelectionTooltip(selection);
+                    showSelectionTooltip(selection, e.clientX, e.clientY);
                 });
             }
         });
     }
 
-    function showSelectionTooltip(selection) {
+    // 存储当前选中的文本，避免在 onclick 中传递字符串
+    let currentSelectedText = '';
+
+    function showSelectionTooltip(selection, x, y) {
         // 移除已存在的工具提示
         const existingTooltip = document.querySelector('.selection-tooltip');
         if (existingTooltip) {
@@ -1178,6 +1178,9 @@
         const selectedText = selection.toString().trim();
         if (selectedText.length < 1) return; // 太短的文本不显示工具提示
 
+        // 保存选中的文本到全局变量
+        currentSelectedText = selectedText;
+
         const range = selection.getRangeAt(0);
         const rect = range.getBoundingClientRect();
 
@@ -1185,8 +1188,8 @@
         tooltip.className = 'selection-tooltip';
 
         // 计算工具提示位置，确保不超出屏幕边界
-        let top = rect.top - 45;
-        let left = rect.left;
+        let top = y - 45;
+        let left = x;
 
         if (top < 10) {
             top = rect.bottom + 5;
@@ -1208,19 +1211,47 @@
         `;
 
         tooltip.innerHTML = `
-            <button class="btn border-0 bg-transparent text-success p-1" title="保存摘录" onclick="saveExcerpt('${selectedText}')">
+            <button class="btn border-0 bg-transparent text-success p-1" title="保存摘录" data-action="excerpt">
                 <i class="bi bi-bookmark-plus"></i>
             </button>
-            <button class="btn border-0 bg-transparent text-info p-1" title="保存为模板" onclick="tooltipTemplateClicked(event, '${selectedText}')">
+            <button class="btn border-0 bg-transparent text-info p-1" title="保存为模板" data-action="template">
                 <i class="bi bi-file-text"></i>
             </button>
-            <button class="btn border-0 bg-transparent text-primary p-1" title="重写" onclick="tooltipRewriteClicked(event, '${selectedText}')" >
+            <button class="btn border-0 bg-transparent text-primary p-1" title="重写" data-action="rewrite">
                 <i class="bi bi-pencil"></i>
             </button>
-            <button class="btn border-0 bg-transparent text-warning p-1" title="替换敏感词"  onclick="tooltipSensitiveClicked(event, '${selectedText}')">
+            <button class="btn border-0 bg-transparent text-warning p-1" title="替换敏感词" data-action="sensitive">
                 <i class="bi bi-shield-check"></i>
             </button>
-        `
+        `;
+
+        // 添加事件监听器
+        tooltip.querySelectorAll('button[data-action]').forEach(button => {
+            button.addEventListener('click', function (e) {
+                e.stopPropagation();
+                e.preventDefault();
+                const action = this.getAttribute('data-action');
+
+                switch (action) {
+                    case 'excerpt':
+                        saveExcerpt();
+                        break;
+                    case 'template':
+                        tooltipTemplateClicked();
+                        break;
+                    case 'rewrite':
+                        tooltipRewriteClicked();
+                        break;
+                    case 'sensitive':
+                        tooltipSensitiveClicked();
+                        break;
+                }
+                const existingTooltip = document.querySelector('.selection-tooltip');
+                if (existingTooltip) {
+                    existingTooltip.remove();
+                }
+            });
+        });
 
         // 添加到DOM
         document.body.appendChild(tooltip);
@@ -1270,7 +1301,7 @@
         saveExcerpt(selectedText);
     }
 
-    async function saveExcerpt(text) {
+    async function saveExcerpt() {
         const token = localStorage.getItem('token');
 
         if (token) {
@@ -1285,7 +1316,7 @@
                     body: JSON.stringify({
                         book_id: currentBook.id,
                         chapter_id: chapters[currentChapterIndex].id,
-                        content: text,
+                        content: currentSelectedText,
                         note: ''
                     })
                 });
@@ -1580,7 +1611,6 @@
 
     // ==================== 模板功能 ====================
 
-    let currentSelectedText = '';
     let currentKeywords = [];
 
     function createTemplateFromSelection() {
@@ -1593,9 +1623,13 @@
         }
 
         currentSelectedText = selectedText;
-        document.getElementById('templateContent').value = selectedText;
-        document.getElementById('createTemplateForm').classList.remove('d-none');
+        showCurrentSelectedTemplateForm();
+    }
 
+    function showCurrentSelectedTemplateForm() {
+        document.getElementById('templatesPanel').style.width = '70%';
+        document.getElementById('templateContent').value = currentSelectedText;
+        document.getElementById('createTemplateForm').classList.remove('d-none');
         // 自动提取关键词
         extractKeywords();
     }
@@ -1604,34 +1638,93 @@
         const content = document.getElementById('templateContent').value.trim();
         if (!content) return;
 
-        const token = localStorage.getItem('token');
-        if (!token) return;
+        // 综合姓氏列表（单姓 + 复姓）
+        const surnames = new Set([
+            '李', '王', '张', '刘', '陈', '杨', '赵', '黄', '周', '吴',
+            '徐', '孙', '胡', '朱', '高', '林', '何', '郭', '马', '罗',
+            '梁', '宋', '郑', '谢', '韩', '唐', '冯', '于', '董', '萧',
+            '程', '曹', '袁', '邓', '许', '傅', '沈', '曾', '彭', '吕',
+            '苏', '卢', '蒋', '蔡', '贾', '丁', '魏', '薛', '叶', '阎',
+            '余', '潘', '杜', '戴', '夏', '钟', '汪', '田', '任', '姜',
+            '范', '方', '石', '姚', '谭', '廖', '邹', '熊', '金', '陆',
+            '郝', '孔', '白', '崔', '康', '毛', '邱', '秦', '江', '史',
+            '顾', '侯', '邵', '孟', '龙', '万', '段', '雷', '钱', '汤',
+            '尹', '黎', '易', '常', '武', '乔', '贺', '赖', '龚', '文',
+            '欧阳', '司马', '上官', '司徒', '诸葛', '夏侯', '东方', '南宫'
+        ]);
 
-        try {
-            const response = await fetch('/api/templates/extract-keywords', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(content)
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-                displayKeywordsList(result.suggested_keywords);
-            }
-        } catch (error) {
-            console.error('提取关键词失败:', error);
+        function isChineseCharacters(str) {
+            return /^[\u4e00-\u9fa5]+$/.test(str);
         }
+
+        const names = new Set();
+        const cleanContent = content.replace(/[\s\.,，。!！?？;；:：、（）()《》""''"“”]/g, '');
+        
+        // 预定义一些常见的非名字词语，用于过滤误识别
+        const commonWords = new Set(['今天', '明天', '昨天', '我们', '你们', '他们', '这个', '那个', '这里', '那里']);
+        const noendings = new Set([
+            '的', '了', '在', '是', '有', '和', '就', '都', '被', '从', '以', '为', '上', '要', '出', '一', '这',
+            '那', '他', '她', '它', '我', '你', '们', '什', '么', '怎', '样', '哪', '候', '地', '个', '说', '话',
+            '看', '见', '听', '到', '想', '着', '了', '吗', '呢', '吧', '啊', '呀', '哦', '嗯', '与', '哼', '嘿',
+            '嘻', '哈', '呵', '嘿', '咦', '哇', '哎', '唉', '哟', '喂', '喔', '噢', '嗨', '咳', '咯', '嗯', '唔',
+            '嗷', '哼', '哦', '啊', '呀', '哎', '唉', '哟', '喂', '喔', '噢', '嗨', '咳', '咯', '嗯', '唔', '嗷']);
+        
+        for (let i = 0; i < cleanContent.length; i++) {
+            // 检查所有可能的2-4字符组合
+            for (let len = 2; len <= 4 && i + len <= cleanContent.length; len++) {
+                const candidate = cleanContent.substring(i, i + len);
+                
+                // 基本验证：全中文且不在常见词语列表中
+                if (!isChineseCharacters(candidate) || commonWords.has(candidate) || noendings.has(candidate[len - 1])) {
+                    continue;
+                }
+                
+                let isValidName = false;
+                
+                if (len === 2) {
+                    // 2字符：单姓+单名
+                    const surname = candidate[0];
+                    if (surnames.has(surname)) {
+                        isValidName = true;
+                    }
+                } else if (len === 3) {
+                    // 3字符：可能是单姓+双名 或 复姓+单名
+                    const singleSurname = candidate[0];
+                    const compoundSurname = candidate.substring(0, 2);
+                    
+                    if (surnames.has(singleSurname) || surnames.has(compoundSurname)) {
+                        isValidName = true;
+                    }
+                } else if (len === 4) {
+                    // 4字符：复姓+双名
+                    const compoundSurname = candidate.substring(0, 2);
+                    if (surnames.has(compoundSurname)) {
+                        isValidName = true;
+                    }
+                }
+                if (isValidName) {
+                    names.add(candidate);
+                }
+            }
+        }
+        let suggested_keywords = {};
+        let index = 1;
+        if (content.includes('我')) {
+            suggested_keywords['man1'] = '我';
+            index += 1;
+        }
+        names.forEach(name => {
+            suggested_keywords['man' + index] = name;
+            index += 1;
+        })
+        displayKeywordsList(suggested_keywords);
     }
 
     function displayKeywordsList(suggestedKeywords) {
         const container = document.getElementById('keywordsList');
         currentKeywords = [];
 
-        let html = '<div class="mb-2"><small class="text-muted">点击下方关键词来设置模板变量：</small></div>';
-
+        let html = '';
         Object.entries(suggestedKeywords).forEach(([key, value]) => {
             html += `
                 <div class="d-flex align-items-center mb-2">
@@ -1642,14 +1735,6 @@
                 </div>
             `;
         });
-
-        html += `
-            <div class="mt-2">
-                <button type="button" class="btn btn-outline-primary btn-sm" onclick="addCustomKeyword()">
-                    <i class="bi bi-plus"></i> 添加自定义关键词
-                </button>
-            </div>
-        `;
 
         container.innerHTML = html;
     }
@@ -1674,11 +1759,17 @@
     }
 
     function addCustomKeyword() {
-        const key = prompt('请输入关键词名称（如：man1, place1等）：');
-        if (!key) return;
+        const key = document.getElementById('customKeyword').value.trim();
+        const value = document.getElementById('customKeywordValue').value.trim();
+        if (!value || !key) {
+            showAlert('请输入关键词和文本', 'warning');
+            return;
+        }
 
-        const value = prompt('请输入要替换的文本：');
-        if (!value) return;
+        if (currentKeywords.includes(key)) {
+            showAlert('关键词已存在', 'warning');
+            return;
+        }
 
         const content = document.getElementById('templateContent');
         if (content.value.includes(value)) {
@@ -1695,6 +1786,7 @@
                     <span class="text-primary">${value}</span>
                 </div>
             `;
+            document.getElementById('customKeywordValue').value = '';
         } else {
             showAlert('在模板内容中未找到指定文本', 'warning');
         }
@@ -1750,7 +1842,7 @@
     }
 
     function cancelCreateTemplate() {
-        document.getElementById('createTemplateForm').classList.add('d-none');
+        document.getElementById('templatesPanel').style.width = '';
         document.getElementById('templateName').value = '';
         document.getElementById('templateContent').value = '';
         document.getElementById('templateTags').value = '';
@@ -1894,6 +1986,35 @@
             }
             keywordValues[keyword] = value;
         }
+        // """应用模板"""
+        // template = db.query(Template).filter(
+        //     Template.id == apply_data.template_id,
+        //     Template.user_id == current_user.id
+        // ).first()
+
+        // if not template:
+        //     raise HTTPException(status_code=404, detail="模板不存在")
+
+        // # 解析关键词
+        // keywords = json.loads(template.keywords)
+
+        // # 检查是否提供了所有必需的关键词值
+        // for keyword in keywords:
+        //     if keyword not in apply_data.keyword_values:
+        //         raise HTTPException(
+        //             status_code=400,
+        //             detail=f"缺少关键词值: {keyword}"
+        //         )
+
+        // # 应用模板
+        // result_content = template.content
+        // for keyword, value in apply_data.keyword_values.items():
+        //     result_content = result_content.replace(f"{keyword}", value)
+
+        // return {
+        //     "content": result_content,
+        //     "template_name": template.name
+        // }
 
         try {
             const response = await fetch('/api/templates/apply', {
@@ -2160,9 +2281,7 @@
 
     // ==================== 工具提示相关函数 ====================
 
-    function tooltipTemplateClicked(e, text) {
-        e.stopPropagation();
-        e.preventDefault();
+    function tooltipTemplateClicked(e) {
         const token = localStorage.getItem('token');
         if (!token) {
             showAlert('模板功能需要登录后使用', 'warning');
@@ -2172,17 +2291,11 @@
         // 打开模板面板并填充选中的文本
         toggleTemplates();
         setTimeout(() => {
-            currentSelectedText = text;
-            document.getElementById('templateContent').value = text;
-            document.getElementById('createTemplateForm').classList.remove('d-none');
-            extractKeywords();
+            showCurrentSelectedTemplateForm();
         }, 100);
     }
 
-    function tooltipRewriteClicked(e, text) {
-        e.stopPropagation();
-        e.preventDefault();
-
+    function tooltipRewriteClicked() {
         const token = localStorage.getItem('token');
         if (!token) {
             showAlert('重写功能需要登录后使用', 'warning');
@@ -2193,7 +2306,7 @@
         toggleRewrite();
         setTimeout(() => {
             currentRewriteType = 'rewrite';
-            document.getElementById('originalContent').value = text;
+            document.getElementById('originalContent').value = currentSelectedText;
             document.getElementById('rewrittenContent').value = '';
             document.getElementById('rewriteForm').classList.remove('d-none');
             document.getElementById('templateSelector').style.display = 'block';
@@ -2207,18 +2320,16 @@
         }, 100);
     }
 
-    function tooltipSensitiveClicked(e, text) {
-        e.stopPropagation();
-        e.preventDefault();
+    function tooltipSensitiveClicked() {
         // 打开敏感词面板
         toggleSensitiveWords();
 
         // 可以在这里添加预填充敏感词的逻辑
         setTimeout(() => {
             const newSensitiveWordInput = document.getElementById('newSensitiveWord');
-            if (newSensitiveWordInput && text.length < 20) {
+            if (newSensitiveWordInput && currentSelectedText.length < 20) {
                 // 如果选中文本较短，可以作为敏感词候选
-                newSensitiveWordInput.value = text;
+                newSensitiveWordInput.value = currentSelectedText;
             }
         }, 100);
     }
