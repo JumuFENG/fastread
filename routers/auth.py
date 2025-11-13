@@ -28,6 +28,8 @@ class UserCreate(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+    expires_at: str  # ISO format datetime string
+    remember_me: bool = False
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
@@ -35,15 +37,20 @@ def verify_password(plain_password, hashed_password):
 def get_password_hash(password):
     return pwd_context.hash(password)
 
-def create_access_token(data: dict, expires_delta: timedelta = None):
+def create_access_token(data: dict, expires_delta: timedelta = None, remember_me: bool = False):
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
+        # 如果选择记住我，token有效期更长
+        if remember_me:
+            expire = datetime.utcnow() + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
+        else:
+            expire = datetime.utcnow() + timedelta(days=7)  # 默认7天
+    
+    to_encode.update({"exp": expire, "remember_me": remember_me})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+    return encoded_jwt, expire
 
 def authenticate_user(db: Session, username: str, password: str):
     user = db.query(User).filter(User.username == username).first()
@@ -112,16 +119,57 @@ async def register(user: UserCreate, db: Session = Depends(get_db)):
         db.refresh(db_user)
         
         access_token_expires = timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
-        access_token = create_access_token(
-            data={"sub": user.username}, expires_delta=access_token_expires
+        access_token, expire_time = create_access_token(
+            data={"sub": user.username}, expires_delta=access_token_expires, remember_me=True
         )
-        return {"access_token": access_token, "token_type": "bearer"}
+        return {
+            "access_token": access_token, 
+            "token_type": "bearer",
+            "expires_at": expire_time.isoformat(),
+            "remember_me": True
+        }
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail="注册失败，请稍后重试")
 
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+    remember_me: bool = False
+
+@router.post("/login", response_model=Token)
+async def login_json(login_data: LoginRequest, db: Session = Depends(get_db)):
+    """JSON格式的登录接口，支持记住我功能"""
+    user = authenticate_user(db, login_data.username, login_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="用户名或密码错误",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # 根据remember_me设置不同的过期时间
+    if login_data.remember_me:
+        access_token_expires = timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
+    else:
+        access_token_expires = timedelta(days=7)
+    
+    access_token, expire_time = create_access_token(
+        data={"sub": user.username}, 
+        expires_delta=access_token_expires,
+        remember_me=login_data.remember_me
+    )
+    
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer",
+        "expires_at": expire_time.isoformat(),
+        "remember_me": login_data.remember_me
+    }
+
 @router.post("/token", response_model=Token)
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    """OAuth2兼容的登录接口"""
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
@@ -129,11 +177,16 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
             detail="用户名或密码错误",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    access_token_expires = timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
-    access_token = create_access_token(
+    access_token_expires = timedelta(days=7)
+    access_token, expire_time = create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer",
+        "expires_at": expire_time.isoformat(),
+        "remember_me": False
+    }
 
 class UserInfo(BaseModel):
     id: int
@@ -145,3 +198,50 @@ class UserInfo(BaseModel):
 @router.get("/me", response_model=UserInfo)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
     return current_user
+
+@router.post("/refresh", response_model=Token)
+async def refresh_token(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    """刷新token，延长有效期"""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        remember_me: bool = payload.get("remember_me", False)
+        
+        if username is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="无效的token",
+            )
+        
+        # 验证用户是否存在
+        user = db.query(User).filter(User.username == username).first()
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="用户不存在",
+            )
+        
+        # 创建新token
+        if remember_me:
+            access_token_expires = timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
+        else:
+            access_token_expires = timedelta(days=7)
+        
+        new_token, expire_time = create_access_token(
+            data={"sub": username},
+            expires_delta=access_token_expires,
+            remember_me=remember_me
+        )
+        
+        return {
+            "access_token": new_token,
+            "token_type": "bearer",
+            "expires_at": expire_time.isoformat(),
+            "remember_me": remember_me
+        }
+        
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="无效的token",
+        )

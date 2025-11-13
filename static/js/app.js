@@ -257,6 +257,8 @@ async function login() {
             const data = await response.json();
             localStorage.setItem('token', data.access_token);
             localStorage.setItem('username', username);
+            localStorage.setItem('token_expires_at', data.expires_at);
+            localStorage.setItem('remember_me', data.remember_me ? 'true' : 'false');
 
             currentUser = { username: username };
             updateNavbar(true);
@@ -363,6 +365,8 @@ async function register() {
             // 注册成功后自动登录
             localStorage.setItem('token', data.access_token);
             localStorage.setItem('username', username);
+            localStorage.setItem('token_expires_at', data.expires_at);
+            localStorage.setItem('remember_me', data.remember_me ? 'true' : 'false');
 
             currentUser = { username: username };
             updateNavbar(true);
@@ -396,6 +400,8 @@ async function register() {
 function logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('username');
+    localStorage.removeItem('token_expires_at');
+    localStorage.removeItem('remember_me');
     currentUser = null;
     updateNavbar(false);
     showAlert('已退出登录', 'info');

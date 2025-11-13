@@ -10,14 +10,14 @@
                 <!-- 标签页导航 -->
                 <ul class="nav nav-tabs nav-justified mb-4" id="authTabs" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="login-tab" data-bs-toggle="tab" 
-                                data-bs-target="#login-pane" type="button" role="tab">
+                        <button class="nav-link active" id="login-tab" data-bs-toggle="tab" data-bs-target="#login-pane"
+                            type="button" role="tab">
                             <i class="bi bi-box-arrow-in-right"></i> 登录
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="register-tab" data-bs-toggle="tab" 
-                                data-bs-target="#register-pane" type="button" role="tab">
+                        <button class="nav-link" id="register-tab" data-bs-toggle="tab" data-bs-target="#register-pane"
+                            type="button" role="tab">
                             <i class="bi bi-person-plus"></i> 注册
                         </button>
                     </li>
@@ -33,8 +33,8 @@
                                     <span class="input-group-text">
                                         <i class="bi bi-person"></i>
                                     </span>
-                                    <input type="text" class="form-control" id="pageLoginUsername" 
-                                           placeholder="请输入用户名" required>
+                                    <input type="text" class="form-control" id="pageLoginUsername" placeholder="请输入用户名"
+                                        required>
                                 </div>
                             </div>
                             <div class="mb-3">
@@ -43,10 +43,10 @@
                                     <span class="input-group-text">
                                         <i class="bi bi-lock"></i>
                                     </span>
-                                    <input type="password" class="form-control" id="pageLoginPassword" 
-                                           placeholder="请输入密码" required>
-                                    <button class="btn btn-outline-secondary" type="button" 
-                                            onclick="togglePasswordVisibility('pageLoginPassword', this)">
+                                    <input type="password" class="form-control" id="pageLoginPassword"
+                                        placeholder="请输入密码" required>
+                                    <button class="btn btn-outline-secondary" type="button"
+                                        onclick="togglePasswordVisibility('pageLoginPassword', this)">
                                         <i class="bi bi-eye"></i>
                                     </button>
                                 </div>
@@ -73,8 +73,8 @@
                                     <span class="input-group-text">
                                         <i class="bi bi-person"></i>
                                     </span>
-                                    <input type="text" class="form-control" id="pageRegisterUsername" 
-                                           placeholder="3-20个字符，只能包含字母、数字和下划线" required>
+                                    <input type="text" class="form-control" id="pageRegisterUsername"
+                                        placeholder="3-20个字符，只能包含字母、数字和下划线" required>
                                 </div>
                                 <div class="form-text">用户名长度3-20个字符，只能包含字母、数字和下划线</div>
                             </div>
@@ -84,8 +84,8 @@
                                     <span class="input-group-text">
                                         <i class="bi bi-envelope"></i>
                                     </span>
-                                    <input type="email" class="form-control" id="pageRegisterEmail" 
-                                           placeholder="请输入邮箱地址" required>
+                                    <input type="email" class="form-control" id="pageRegisterEmail"
+                                        placeholder="请输入邮箱地址" required>
                                 </div>
                             </div>
                             <div class="mb-3">
@@ -94,10 +94,10 @@
                                     <span class="input-group-text">
                                         <i class="bi bi-lock"></i>
                                     </span>
-                                    <input type="password" class="form-control" id="pageRegisterPassword" 
-                                           placeholder="至少6个字符" required>
-                                    <button class="btn btn-outline-secondary" type="button" 
-                                            onclick="togglePasswordVisibility('pageRegisterPassword', this)">
+                                    <input type="password" class="form-control" id="pageRegisterPassword"
+                                        placeholder="至少6个字符" required>
+                                    <button class="btn btn-outline-secondary" type="button"
+                                        onclick="togglePasswordVisibility('pageRegisterPassword', this)">
                                         <i class="bi bi-eye"></i>
                                     </button>
                                 </div>
@@ -109,10 +109,10 @@
                                     <span class="input-group-text">
                                         <i class="bi bi-lock-fill"></i>
                                     </span>
-                                    <input type="password" class="form-control" id="pageConfirmPassword" 
-                                           placeholder="请再次输入密码" required>
-                                    <button class="btn btn-outline-secondary" type="button" 
-                                            onclick="togglePasswordVisibility('pageConfirmPassword', this)">
+                                    <input type="password" class="form-control" id="pageConfirmPassword"
+                                        placeholder="请再次输入密码" required>
+                                    <button class="btn btn-outline-secondary" type="button"
+                                        onclick="togglePasswordVisibility('pageConfirmPassword', this)">
                                         <i class="bi bi-eye"></i>
                                     </button>
                                 </div>
@@ -120,11 +120,13 @@
                             <div class="mb-3 form-check">
                                 <input type="checkbox" class="form-check-input" id="agreeTerms" required>
                                 <label class="form-check-label" for="agreeTerms">
-                                    我同意 <a href="#" class="text-decoration-none">用户协议</a> 和 <a href="#" class="text-decoration-none">隐私政策</a>
+                                    我同意 <a href="#" class="text-decoration-none">用户协议</a> 和 <a href="#"
+                                        class="text-decoration-none">隐私政策</a>
                                 </label>
                             </div>
                             <div id="pageRegisterError" class="alert alert-danger d-none"></div>
-                            <button type="button" class="btn btn-success w-100" onclick="pageRegister()" id="pageRegisterBtn">
+                            <button type="button" class="btn btn-success w-100" onclick="pageRegister()"
+                                id="pageRegisterBtn">
                                 <i class="bi bi-person-plus"></i> 注册
                             </button>
                         </form>
@@ -146,300 +148,333 @@
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // 如果已经登录，重定向到首页
-    if (localStorage.getItem('token')) {
-        window.location.href = '/';
-        return;
-    }
-    
-    initializePageFormValidation();
-});
-
-// 初始化页面表单验证
-function initializePageFormValidation() {
-    // 登录表单回车提交
-    const loginForm = document.getElementById('pageLoginForm');
-    if (loginForm) {
-        loginForm.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                pageLogin();
-            }
-        });
-    }
-    
-    // 注册表单回车提交
-    const registerForm = document.getElementById('pageRegisterForm');
-    if (registerForm) {
-        registerForm.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                pageRegister();
-            }
-        });
-    }
-    
-    // 实时验证
-    const pageUsernameInput = document.getElementById('pageRegisterUsername');
-    if (pageUsernameInput) {
-        pageUsernameInput.addEventListener('input', function() {
-            validatePageUsername(this.value.trim());
-        });
-    }
-    
-    const pageEmailInput = document.getElementById('pageRegisterEmail');
-    if (pageEmailInput) {
-        pageEmailInput.addEventListener('input', function() {
-            validatePageEmail(this.value.trim());
-        });
-    }
-    
-    const pagePasswordInput = document.getElementById('pageRegisterPassword');
-    if (pagePasswordInput) {
-        pagePasswordInput.addEventListener('input', function() {
-            validatePagePassword(this.value);
-        });
-    }
-    
-    const pageConfirmPasswordInput = document.getElementById('pageConfirmPassword');
-    if (pageConfirmPasswordInput) {
-        pageConfirmPasswordInput.addEventListener('input', function() {
-            validatePageConfirmPassword(this.value);
-        });
-    }
-}
-
-// 页面登录
-async function pageLogin() {
-    const username = document.getElementById('pageLoginUsername').value.trim();
-    const password = document.getElementById('pageLoginPassword').value;
-    const errorDiv = document.getElementById('pageLoginError');
-    const loginBtn = document.getElementById('pageLoginBtn');
-    
-    errorDiv.classList.add('d-none');
-    
-    if (!username || !password) {
-        errorDiv.textContent = '请输入用户名和密码';
-        errorDiv.classList.remove('d-none');
-        return;
-    }
-    
-    loginBtn.disabled = true;
-    loginBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>登录中...';
-    
-    try {
-        const formData = new FormData();
-        formData.append('username', username);
-        formData.append('password', password);
-        
-        const response = await fetch('/api/auth/token', {
-            method: 'POST',
-            body: formData
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            localStorage.setItem('token', data.access_token);
-            localStorage.setItem('username', username);
-            
-            showAlert('登录成功，正在跳转...', 'success');
-            
-            // 跳转到首页
-            setTimeout(() => {
-                window.location.href = '/';
-            }, 1000);
-            
-        } else {
-            const error = await response.json();
-            errorDiv.textContent = error.detail || '登录失败';
-            errorDiv.classList.remove('d-none');
+    document.addEventListener('DOMContentLoaded', function () {
+        // 检查token是否过期
+        if (checkTokenExpiration()) {
+            // Token有效，重定向到首页
+            window.location.href = '/';
+            return;
         }
-    } catch (error) {
-        console.error('登录失败:', error);
-        errorDiv.textContent = '登录失败，请检查网络连接';
-        errorDiv.classList.remove('d-none');
-    } finally {
-        loginBtn.disabled = false;
-        loginBtn.innerHTML = '<i class="bi bi-box-arrow-in-right"></i> 登录';
-    }
-}
 
-// 页面注册
-async function pageRegister() {
-    const username = document.getElementById('pageRegisterUsername').value.trim();
-    const email = document.getElementById('pageRegisterEmail').value.trim();
-    const password = document.getElementById('pageRegisterPassword').value;
-    const confirmPassword = document.getElementById('pageConfirmPassword').value;
-    const agreeTerms = document.getElementById('agreeTerms').checked;
-    const errorDiv = document.getElementById('pageRegisterError');
-    const registerBtn = document.getElementById('pageRegisterBtn');
-    
-    errorDiv.classList.add('d-none');
-    
-    if (!username || !email || !password || !confirmPassword) {
-        errorDiv.textContent = '请填写所有字段';
-        errorDiv.classList.remove('d-none');
-        return;
-    }
-    
-    if (!agreeTerms) {
-        errorDiv.textContent = '请同意用户协议和隐私政策';
-        errorDiv.classList.remove('d-none');
-        return;
-    }
-    
-    // 验证输入格式
-    if (!validatePageUsername(username) || !validatePageEmail(email) || 
-        !validatePagePassword(password) || !validatePageConfirmPassword(confirmPassword)) {
-        errorDiv.textContent = '请检查输入格式';
-        errorDiv.classList.remove('d-none');
-        return;
-    }
-    
-    registerBtn.disabled = true;
-    registerBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>注册中...';
-    
-    try {
-        const response = await fetch('/api/auth/register', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                username: username,
-                email: email,
-                password: password
-            })
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            
-            localStorage.setItem('token', data.access_token);
-            localStorage.setItem('username', username);
-            
-            showAlert('注册成功，欢迎使用FastRead！正在跳转...', 'success');
-            
-            setTimeout(() => {
-                window.location.href = '/';
-            }, 1000);
-            
-        } else {
-            const error = await response.json();
-            errorDiv.textContent = error.detail || '注册失败';
-            errorDiv.classList.remove('d-none');
+        initializePageFormValidation();
+    });
+
+    // 检查token是否过期
+    function checkTokenExpiration() {
+        const token = localStorage.getItem('token');
+        const expiresAt = localStorage.getItem('token_expires_at');
+
+        if (!token || !expiresAt) {
+            return false;
         }
-    } catch (error) {
-        console.error('注册失败:', error);
-        errorDiv.textContent = '注册失败，请检查网络连接';
-        errorDiv.classList.remove('d-none');
-    } finally {
-        registerBtn.disabled = false;
-        registerBtn.innerHTML = '<i class="bi bi-person-plus"></i> 注册';
-    }
-}
 
-// 页面表单验证函数
-function validatePageUsername(username) {
-    const input = document.getElementById('pageRegisterUsername');
-    
-    if (!username) {
-        input.classList.remove('is-valid', 'is-invalid');
+        const expirationTime = new Date(expiresAt);
+        const now = new Date();
+
+        if (now >= expirationTime) {
+            // Token已过期，清除
+            localStorage.removeItem('token');
+            localStorage.removeItem('username');
+            localStorage.removeItem('token_expires_at');
+            localStorage.removeItem('remember_me');
+            return false;
+        }
+
         return true;
     }
-    
-    if (username.length < 3 || username.length > 20 || !/^[a-zA-Z0-9_]+$/.test(username)) {
-        input.classList.remove('is-valid');
-        input.classList.add('is-invalid');
-        return false;
-    }
-    
-    input.classList.remove('is-invalid');
-    input.classList.add('is-valid');
-    return true;
-}
 
-function validatePageEmail(email) {
-    const input = document.getElementById('pageRegisterEmail');
-    
-    if (!email) {
-        input.classList.remove('is-valid', 'is-invalid');
+    // 初始化页面表单验证
+    function initializePageFormValidation() {
+        // 登录表单回车提交
+        const loginForm = document.getElementById('pageLoginForm');
+        if (loginForm) {
+            loginForm.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    pageLogin();
+                }
+            });
+        }
+
+        // 注册表单回车提交
+        const registerForm = document.getElementById('pageRegisterForm');
+        if (registerForm) {
+            registerForm.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    pageRegister();
+                }
+            });
+        }
+
+        // 实时验证
+        const pageUsernameInput = document.getElementById('pageRegisterUsername');
+        if (pageUsernameInput) {
+            pageUsernameInput.addEventListener('input', function () {
+                validatePageUsername(this.value.trim());
+            });
+        }
+
+        const pageEmailInput = document.getElementById('pageRegisterEmail');
+        if (pageEmailInput) {
+            pageEmailInput.addEventListener('input', function () {
+                validatePageEmail(this.value.trim());
+            });
+        }
+
+        const pagePasswordInput = document.getElementById('pageRegisterPassword');
+        if (pagePasswordInput) {
+            pagePasswordInput.addEventListener('input', function () {
+                validatePagePassword(this.value);
+            });
+        }
+
+        const pageConfirmPasswordInput = document.getElementById('pageConfirmPassword');
+        if (pageConfirmPasswordInput) {
+            pageConfirmPasswordInput.addEventListener('input', function () {
+                validatePageConfirmPassword(this.value);
+            });
+        }
+    }
+
+    // 页面登录
+    async function pageLogin() {
+        const username = document.getElementById('pageLoginUsername').value.trim();
+        const password = document.getElementById('pageLoginPassword').value;
+        const rememberMe = document.getElementById('rememberMe').checked;
+        const errorDiv = document.getElementById('pageLoginError');
+        const loginBtn = document.getElementById('pageLoginBtn');
+
+        errorDiv.classList.add('d-none');
+
+        if (!username || !password) {
+            errorDiv.textContent = '请输入用户名和密码';
+            errorDiv.classList.remove('d-none');
+            return;
+        }
+
+        loginBtn.disabled = true;
+        loginBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>登录中...';
+
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password,
+                    remember_me: rememberMe
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+
+                // 保存token和相关信息
+                localStorage.setItem('token', data.access_token);
+                localStorage.setItem('username', username);
+                localStorage.setItem('token_expires_at', data.expires_at);
+                localStorage.setItem('remember_me', data.remember_me.toString());
+
+                showAlert('登录成功，正在跳转...', 'success');
+
+                // 跳转到首页
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 1000);
+
+            } else {
+                const error = await response.json();
+                errorDiv.textContent = error.detail || '登录失败';
+                errorDiv.classList.remove('d-none');
+            }
+        } catch (error) {
+            console.error('登录失败:', error);
+            errorDiv.textContent = '登录失败，请检查网络连接';
+            errorDiv.classList.remove('d-none');
+        } finally {
+            loginBtn.disabled = false;
+            loginBtn.innerHTML = '<i class="bi bi-box-arrow-in-right"></i> 登录';
+        }
+    }
+
+    // 页面注册
+    async function pageRegister() {
+        const username = document.getElementById('pageRegisterUsername').value.trim();
+        const email = document.getElementById('pageRegisterEmail').value.trim();
+        const password = document.getElementById('pageRegisterPassword').value;
+        const confirmPassword = document.getElementById('pageConfirmPassword').value;
+        const agreeTerms = document.getElementById('agreeTerms').checked;
+        const errorDiv = document.getElementById('pageRegisterError');
+        const registerBtn = document.getElementById('pageRegisterBtn');
+
+        errorDiv.classList.add('d-none');
+
+        if (!username || !email || !password || !confirmPassword) {
+            errorDiv.textContent = '请填写所有字段';
+            errorDiv.classList.remove('d-none');
+            return;
+        }
+
+        if (!agreeTerms) {
+            errorDiv.textContent = '请同意用户协议和隐私政策';
+            errorDiv.classList.remove('d-none');
+            return;
+        }
+
+        // 验证输入格式
+        if (!validatePageUsername(username) || !validatePageEmail(email) ||
+            !validatePagePassword(password) || !validatePageConfirmPassword(confirmPassword)) {
+            errorDiv.textContent = '请检查输入格式';
+            errorDiv.classList.remove('d-none');
+            return;
+        }
+
+        registerBtn.disabled = true;
+        registerBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>注册中...';
+
+        try {
+            const response = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: username,
+                    email: email,
+                    password: password
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+
+                localStorage.setItem('token', data.access_token);
+                localStorage.setItem('username', username);
+
+                showAlert('注册成功，欢迎使用FastRead！正在跳转...', 'success');
+
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 1000);
+
+            } else {
+                const error = await response.json();
+                errorDiv.textContent = error.detail || '注册失败';
+                errorDiv.classList.remove('d-none');
+            }
+        } catch (error) {
+            console.error('注册失败:', error);
+            errorDiv.textContent = '注册失败，请检查网络连接';
+            errorDiv.classList.remove('d-none');
+        } finally {
+            registerBtn.disabled = false;
+            registerBtn.innerHTML = '<i class="bi bi-person-plus"></i> 注册';
+        }
+    }
+
+    // 页面表单验证函数
+    function validatePageUsername(username) {
+        const input = document.getElementById('pageRegisterUsername');
+
+        if (!username) {
+            input.classList.remove('is-valid', 'is-invalid');
+            return true;
+        }
+
+        if (username.length < 3 || username.length > 20 || !/^[a-zA-Z0-9_]+$/.test(username)) {
+            input.classList.remove('is-valid');
+            input.classList.add('is-invalid');
+            return false;
+        }
+
+        input.classList.remove('is-invalid');
+        input.classList.add('is-valid');
         return true;
     }
-    
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-        input.classList.remove('is-valid');
-        input.classList.add('is-invalid');
-        return false;
-    }
-    
-    input.classList.remove('is-invalid');
-    input.classList.add('is-valid');
-    return true;
-}
 
-function validatePagePassword(password) {
-    const input = document.getElementById('pageRegisterPassword');
-    
-    if (!password) {
-        input.classList.remove('is-valid', 'is-invalid');
+    function validatePageEmail(email) {
+        const input = document.getElementById('pageRegisterEmail');
+
+        if (!email) {
+            input.classList.remove('is-valid', 'is-invalid');
+            return true;
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            input.classList.remove('is-valid');
+            input.classList.add('is-invalid');
+            return false;
+        }
+
+        input.classList.remove('is-invalid');
+        input.classList.add('is-valid');
         return true;
     }
-    
-    if (password.length < 6) {
-        input.classList.remove('is-valid');
-        input.classList.add('is-invalid');
-        return false;
-    }
-    
-    input.classList.remove('is-invalid');
-    input.classList.add('is-valid');
-    
-    // 同时验证确认密码
-    const confirmPassword = document.getElementById('pageConfirmPassword').value;
-    if (confirmPassword) {
-        validatePageConfirmPassword(confirmPassword);
-    }
-    
-    return true;
-}
 
-function validatePageConfirmPassword(confirmPassword) {
-    const input = document.getElementById('pageConfirmPassword');
-    const password = document.getElementById('pageRegisterPassword').value;
-    
-    if (!confirmPassword) {
-        input.classList.remove('is-valid', 'is-invalid');
+    function validatePagePassword(password) {
+        const input = document.getElementById('pageRegisterPassword');
+
+        if (!password) {
+            input.classList.remove('is-valid', 'is-invalid');
+            return true;
+        }
+
+        if (password.length < 6) {
+            input.classList.remove('is-valid');
+            input.classList.add('is-invalid');
+            return false;
+        }
+
+        input.classList.remove('is-invalid');
+        input.classList.add('is-valid');
+
+        // 同时验证确认密码
+        const confirmPassword = document.getElementById('pageConfirmPassword').value;
+        if (confirmPassword) {
+            validatePageConfirmPassword(confirmPassword);
+        }
+
         return true;
     }
-    
-    if (password !== confirmPassword) {
-        input.classList.remove('is-valid');
-        input.classList.add('is-invalid');
-        return false;
-    }
-    
-    input.classList.remove('is-invalid');
-    input.classList.add('is-valid');
-    return true;
-}
 
-// 切换密码可见性
-function togglePasswordVisibility(inputId, button) {
-    const input = document.getElementById(inputId);
-    const icon = button.querySelector('i');
-    
-    if (input.type === 'password') {
-        input.type = 'text';
-        icon.classList.remove('bi-eye');
-        icon.classList.add('bi-eye-slash');
-    } else {
-        input.type = 'password';
-        icon.classList.remove('bi-eye-slash');
-        icon.classList.add('bi-eye');
+    function validatePageConfirmPassword(confirmPassword) {
+        const input = document.getElementById('pageConfirmPassword');
+        const password = document.getElementById('pageRegisterPassword').value;
+
+        if (!confirmPassword) {
+            input.classList.remove('is-valid', 'is-invalid');
+            return true;
+        }
+
+        if (password !== confirmPassword) {
+            input.classList.remove('is-valid');
+            input.classList.add('is-invalid');
+            return false;
+        }
+
+        input.classList.remove('is-invalid');
+        input.classList.add('is-valid');
+        return true;
     }
-}
+
+    // 切换密码可见性
+    function togglePasswordVisibility(inputId, button) {
+        const input = document.getElementById(inputId);
+        const icon = button.querySelector('i');
+
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('bi-eye');
+            icon.classList.add('bi-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('bi-eye-slash');
+            icon.classList.add('bi-eye');
+        }
+    }
 </script>
 {% endblock %}

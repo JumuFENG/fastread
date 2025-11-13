@@ -628,8 +628,6 @@
         if (!force && lastSavedProgress &&
             lastSavedProgress.current_chapter === newProgress.current_chapter &&
             Math.abs(lastSavedProgress.reading_position - newProgress.reading_position) < 100) {
-            // 如果章节没变且滚动位置变化小于100px，则不保存
-            console.log('阅读进度无显著变化，跳过保存');
             return;
         }
 
@@ -912,12 +910,22 @@
                 const serverWords = await response.json();
                 // 转换为原有格式
                 if (sensitiveWords[currentBook.id]) {
-                    sensitiveWords[currentBook.id].forEach(word => {
+                    for (const word of sensitiveWords[currentBook.id]) {
                         if (word.id) {
-                            return;
+                            continue;
                         }
-                        serverWords.push(word);
-                    });
+                        if (serverWords.some(serverWord => serverWord.original === word.original)) {
+                            continue;
+                        }
+                        const newWord = await saveSensitiveToServer(word.original, word.replacement);
+                        serverWords.push(newWord);
+                    };
+                    delete sensitiveWords[currentBook.id];
+                    if (Object.keys(sensitiveWords).length > 0) {
+                        localStorage.setItem('sensitiveWords', JSON.stringify(sensitiveWords));
+                    } else {
+                        localStorage.removeItem('sensitiveWords');
+                    }
                 }
                 sensitiveWords[currentBook.id] = serverWords
                 console.log('从服务器加载敏感词成功');
@@ -929,8 +937,44 @@
 
     async function saveSensitiveWords() {
         // 未登录，保存到本地存储
-        // 已登录时为了兼容性，也保存到本地存储作为备份
-        localStorage.setItem('sensitiveWords', JSON.stringify(sensitiveWords));
+        const token = localStorage.getItem('token');
+        if (!token) {
+            localStorage.setItem('sensitiveWords', JSON.stringify(sensitiveWords));
+        }
+    }
+
+    async function saveSensitiveToServer(original, replacement) {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/sensitive-words/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    book_id: currentBook.id,
+                    original,
+                    replacement,
+                    enabled: true
+                })
+            });
+
+            if (response.ok) {
+                return await response.json();
+            }
+
+            const error = await response.json();
+            showAlert(error.detail || '添加敏感词失败', 'danger');
+            return;
+        } catch (error) {
+            showAlert('添加敏感词失败', 'danger');
+            return;
+        }
     }
 
     // 敏感词过滤功能
@@ -988,34 +1032,10 @@
 
         if (token) {
             // 已登录，保存到服务器
-            try {
-                const response = await fetch('/api/sensitive-words/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        book_id: currentBook.id,
-                        original: originalWord,
-                        replacement: replacementWord,
-                        enabled: true
-                    })
-                });
-
-                if (response.ok) {
-                    const newWord = await response.json();
-                    sensitiveWords[currentBook.id].push(newWord);
-                    showAlert('敏感词添加成功', 'success');
-                } else {
-                    const error = await response.json();
-                    showAlert(error.detail || '添加敏感词失败', 'danger');
-                    return;
-                }
-            } catch (error) {
-                console.error('添加敏感词失败:', error);
-                showAlert('添加敏感词失败', 'danger');
-                return;
+            const newWord = await saveSensitiveToServer(originalWord, replacementWord);
+            if (newWord) {
+                sensitiveWords[currentBook.id].push(newWord);
+                showAlert('敏感词添加成功', 'success');
             }
         } else {
             // 未登录，保存到本地
