@@ -168,7 +168,9 @@
                             </div>
                         </div>
                         <div class="mb-3">
-                            <input type="text" class="form-control" id="templateTags" placeholder="输入标签，用逗号分隔">
+                            <label class="form-label">标签设置</label>
+                            <div id="tagsList" class="d-flex flex-wrap gap-2"></div>
+                            <input type="text" class="form-control" id="templateTagInput" placeholder="输入标签，回车确认" autocomplete="off" style="width: 250px;" onchange="updateTagsList()">
                         </div>
                         <div class="mb-3">
                             <textarea class="form-control" id="templateDescription" rows="2"
@@ -176,7 +178,10 @@
                         </div>
                         <div class="d-flex gap-2">
                             <button class="btn btn-success btn-sm" onclick="saveTemplate()">
-                                <i class="bi bi-save"></i> 保存模板
+                                <i class="bi bi-save"></i> 保存
+                            </button>
+                            <button id="cancelTemplateButton" class="btn btn-secondary btn-sm d-none" onclick="cancelCreateTemplate()">
+                                取消
                             </button>
                         </div>
                     </div>
@@ -1632,6 +1637,7 @@
     // ==================== 模板功能 ====================
 
     let currentKeywords = [];
+    let userTemplates = [];
 
     function createTemplateFromSelection() {
         const selection = window.getSelection();
@@ -1644,6 +1650,37 @@
 
         currentSelectedText = selectedText;
         showCurrentSelectedTemplateForm();
+        document.getElementById('cancelTemplateButton').classList.add('d-none');
+    }
+
+    function editTemplate(templateId) {
+        const template = userTemplates.find(t => t.id === templateId);
+        if (template) {
+            currentSelectedText = template.content;
+            document.getElementById('templatesPanel').style.width = '70%';
+            document.getElementById('createTemplateForm').classList.remove('d-none');
+            document.getElementById('templateName').value = template.name;
+            document.getElementById('templateContent').value = template.content;
+            let keywords = {};
+            template.keywords.forEach(k => {
+                keywords[k] = `{${k}}`;
+            });
+            displayKeywordsList(keywords, true);
+            let html = '';
+            template.tags.forEach(tag => {
+                html += `
+                    <div class="d-flex align-items-center mb-2">
+                        <input type="checkbox" class="form-check-input me-2" value="${tag}" checked>
+                        <label class="form-check-label me-2">${tag}</label>
+                    </div>
+                `;
+            });
+            const container = document.getElementById('tagsList');
+            container.innerHTML = html;
+            document.getElementById('templateDescription').value = template.description;
+            document.getElementById('createTemplateForm').templateId = template.id;
+            document.getElementById('cancelTemplateButton').classList.remove('d-none');
+        }
     }
 
     function showCurrentSelectedTemplateForm() {
@@ -1652,6 +1689,8 @@
         document.getElementById('createTemplateForm').classList.remove('d-none');
         // 自动提取关键词
         extractKeywords();
+        document.getElementById('tagsList').innerHTML = '';
+        document.getElementById('templateTagInput').value = '';
     }
 
     async function extractKeywords() {
@@ -1740,7 +1779,7 @@
         displayKeywordsList(suggested_keywords);
     }
 
-    function displayKeywordsList(suggestedKeywords) {
+    function displayKeywordsList(suggestedKeywords, checked=false) {
         const container = document.getElementById('keywordsList');
         currentKeywords = [];
 
@@ -1748,12 +1787,15 @@
         Object.entries(suggestedKeywords).forEach(([key, value]) => {
             html += `
                 <div class="d-flex align-items-center mb-2">
-                    <input type="checkbox" class="form-check-input me-2" id="keyword_${key}" 
+                    <input type="checkbox" class="form-check-input me-2" id="keyword_${key}" ${checked ? 'checked' : ''}
                            onchange="toggleKeyword('${key}', '${value}')">
                     <label class="form-check-label me-2" for="keyword_${key}">${key}:</label>
                     <span class="text-primary">${value}</span>
                 </div>
             `;
+            if (checked) {
+                currentKeywords.push(key);
+            }
         });
 
         container.innerHTML = html;
@@ -1812,19 +1854,36 @@
         }
     }
 
+    function updateTagsList() {
+        const tag = document.getElementById('templateTagInput').value.trim();
+        const container = document.getElementById('tagsList');
+        container.innerHTML += `
+            <div class="d-flex align-items-center mb-2">
+                <input type="checkbox" class="form-check-input me-2" value="${tag}" checked>
+                <label class="form-check-label me-2">${tag}</label>
+            </div>
+        `;
+        document.getElementById('templateTagInput').value = '';
+    }
+
+    function getCheckedTags() {
+        const container = document.getElementById('tagsList');
+        const tags = [];
+        container.querySelectorAll('input[type="checkbox"]:checked').forEach(checkbox => {
+            tags.push(checkbox.value);
+        })
+        return tags;
+    }
+
     async function saveTemplate() {
         const name = document.getElementById('templateName').value.trim();
         const content = document.getElementById('templateContent').value.trim();
-        const tags = document.getElementById('templateTags').value.trim().split(',').map(t => t.trim()).filter(t => t);
         const description = document.getElementById('templateDescription').value.trim();
+        const tags = getCheckedTags();
+        const templateId = document.getElementById('createTemplateForm').templateId;
 
         if (!name || !content) {
             showAlert('请填写模板名称和内容', 'warning');
-            return;
-        }
-
-        if (currentKeywords.length === 0) {
-            showAlert('请至少设置一个关键词', 'warning');
             return;
         }
 
@@ -1832,8 +1891,8 @@
         if (!token) return;
 
         try {
-            const response = await fetch('/api/templates/', {
-                method: 'POST',
+            const response = await fetch(`/api/templates/${templateId??""}`, {
+                method: templateId ? 'PUT' : 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
@@ -1862,12 +1921,16 @@
     }
 
     function cancelCreateTemplate() {
+        if (document.getElementById('createTemplateForm').templateId) {
+            document.getElementById('createTemplateForm').removeAttribute('templateId');
+        }
         document.getElementById('templatesPanel').style.width = '';
         document.getElementById('templateName').value = '';
         document.getElementById('templateContent').value = '';
-        document.getElementById('templateTags').value = '';
+        document.getElementById('templateTagInput').value = '';
         document.getElementById('templateDescription').value = '';
         document.getElementById('keywordsList').innerHTML = '';
+        document.getElementById('tagsList').innerHTML = '';
         currentKeywords = [];
     }
 
@@ -1884,6 +1947,7 @@
 
             if (response.ok) {
                 const templates = await response.json();
+                userTemplates = templates;
                 displayTemplates(templates);
             }
         } catch (error) {
@@ -1913,8 +1977,8 @@
                         </div>
                     </div>
                     <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-primary" onclick="useTemplate(${template.id})">
-                            使用
+                        <button class="btn btn-outline-primary" onclick="editTemplate(${template.id})">
+                            编辑
                         </button>
                         <button class="btn btn-outline-danger" onclick="deleteTemplate(${template.id})">
                             删除
@@ -1926,6 +1990,12 @@
     }
 
     async function useTemplate(templateId) {
+        const template = userTemplates.find(t => t.id === templateId);
+        if (template) {
+            showTemplateApplyDialog(template);
+            return;
+        }
+
         const token = localStorage.getItem('token');
         if (!token) return;
 
