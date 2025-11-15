@@ -160,9 +160,12 @@
                             <label class="form-label">关键词设置</label>
                             <div id="keywordsList" class="d-flex flex-wrap gap-2"></div>
                             <div class="mt-2 d-flex gap-2">
-                                <input type="text" class="form-control" id="customKeyword" placeholder="关键词" style="width: 100px;" autocomplete="off">
-                                <input type="text" class="form-control" id="customKeywordValue" placeholder="文本内容" style="width: 150px;" autocomplete="off">
-                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="addCustomKeyword()">
+                                <input type="text" class="form-control" id="customKeyword" placeholder="关键词"
+                                    style="width: 100px;" autocomplete="off">
+                                <input type="text" class="form-control" id="customKeywordValue" placeholder="文本内容"
+                                    style="width: 150px;" autocomplete="off">
+                                <button type="button" class="btn btn-outline-primary btn-sm"
+                                    onclick="addCustomKeyword()">
                                     <i class="bi bi-plus"></i> 添加
                                 </button>
                             </div>
@@ -170,7 +173,8 @@
                         <div class="mb-3">
                             <label class="form-label">标签设置</label>
                             <div id="tagsList" class="d-flex flex-wrap gap-2"></div>
-                            <input type="text" class="form-control" id="templateTagInput" placeholder="输入标签，回车确认" autocomplete="off" style="width: 250px;" onchange="updateTagsList()">
+                            <input type="text" class="form-control" id="templateTagInput" placeholder="输入标签，回车确认"
+                                autocomplete="off" style="width: 250px;" onchange="updateTagsList()">
                         </div>
                         <div class="mb-3">
                             <textarea class="form-control" id="templateDescription" rows="2"
@@ -196,48 +200,61 @@
                 </div>
                 <div class="panel-body">
                     <div class="mb-3">
-                        <button class="btn btn-primary btn-sm" onclick="startRewrite()">
+                        <button id="rewriteBtn" class="btn btn-primary btn-sm">
                             <i class="bi bi-pencil"></i> 重写选中内容
                         </button>
-                        <button class="btn btn-outline-primary btn-sm" onclick="startInsert()">
+                        <button id="insertBtn" class="btn btn-outline-primary btn-sm">
                             <i class="bi bi-plus-circle"></i> 插入新内容
                         </button>
                     </div>
 
                     <!-- 重写表单 -->
                     <div id="rewriteForm" class="d-none">
-                        <div class="mb-3">
+                        <div class="mb-3" id="originalContentContainer">
                             <label class="form-label">原始内容</label>
                             <textarea class="form-control" id="originalContent" rows="3" readonly></textarea>
                         </div>
+
+                        <!-- 模板选择区域 -->
                         <div class="mb-3">
-                            <label class="form-label">新内容</label>
-                            <textarea class="form-control" id="rewrittenContent" rows="4"
-                                placeholder="输入重写后的内容/新内容"></textarea>
-                        </div>
-                        <div class="mb-3" id="templateSelector" style="display: none;">
-                            <label class="form-label">应用模板</label>
-                            <select class="form-select" id="templateSelect">
+                            <label class="form-label">使用模板（可选）</label>
+
+                            <!-- 标签过滤 -->
+                            <div class="mb-2">
+                                <label class="form-label small">按标签过滤：</label>
+                                <div id="tagFilters" class="d-flex flex-wrap gap-1">
+                                    <!-- 标签按钮将动态生成 -->
+                                </div>
+                            </div>
+
+                            <!-- 模板选择 -->
+                            <select class="form-select" id="templateSelect" onchange="onTemplateSelected()">
                                 <option value="">选择模板</option>
                             </select>
-                            <button type="button" class="btn btn-outline-info btn-sm mt-2"
-                                onclick="applySelectedTemplate()">
-                                应用模板
-                            </button>
+
+                            <!-- 关键词输入区域 -->
+                            <div id="keywordInputs" class="mt-3 d-none">
+                                <label class="form-label small">填写模板关键词：</label>
+                                <div id="keywordInputsList" class="d-flex flex-wrap gap-3">
+                                    <!-- 关键词输入框将动态生成 -->
+                                </div>
+                            </div>
                         </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">新内容</label>
+                            <textarea class="form-control" id="rewrittenContent" rows="6"
+                                placeholder="输入重写后的内容，或使用模板生成"></textarea>
+                        </div>
+
                         <div class="d-flex gap-2">
                             <button class="btn btn-success btn-sm" onclick="saveRewrite()">
-                                <i class="bi bi-save"></i> 保存重写
+                                <i class="bi bi-save"></i> 应用新内容
                             </button>
                             <button class="btn btn-secondary btn-sm" onclick="cancelRewrite()">
                                 取消
                             </button>
                         </div>
-                    </div>
-
-                    <!-- 重写列表 -->
-                    <div id="rewritesList">
-                        <!-- 重写列表 -->
                     </div>
                 </div>
             </div>
@@ -262,37 +279,37 @@
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- 章节内容 -->
-            <div id="chapterContent" class="reader-content">
-                <div class="text-center">
-                    <div class="spinner-border" role="status">
-                        <span class="visually-hidden">加载中...</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 导航按钮 -->
-            <div class="reader-navigation mt-4">
-                <div class="d-flex justify-content-between">
-                    <button id="prevChapter" class="btn btn-link" onclick="prevChapter()" disabled>
-                        <i class="bi bi-chevron-left"></i>
-                        <span class="d-none d-md-inline">上一章</span>
-                    </button>
-                    <button class="btn btn-link btn-sm" onclick="toggleScrollTimer()" title="自动滚动">
-                        <i class="bi bi-skip-end"></i>
-                    </button>
-                    <div class="chapter-info">
-                        <input id="chapterProgress" onchange="jumpToChapter()"></input>/&nbsp<span
-                            id="totalChapters">1</span>
-                    </div>
-                    <button id="nextChapter" class="btn btn-link" onclick="nextChapter()" disabled>
-                        <span class="d-none d-md-inline">下一章</span>
-                        <i class="bi bi-chevron-right"></i>
-                    </button>
+        <!-- 章节内容 -->
+        <div id="chapterContent" class="reader-content">
+            <div class="text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">加载中...</span>
                 </div>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- 导航按钮 -->
+<div class="reader-navigation mt-4">
+    <div class="d-flex justify-content-between">
+        <button id="prevChapter" class="btn btn-link" onclick="prevChapter()" disabled>
+            <i class="bi bi-chevron-left"></i>
+            <span class="d-none d-md-inline">上一章</span>
+        </button>
+        <button class="btn btn-link btn-sm" onclick="toggleScrollTimer()" title="自动滚动">
+            <i class="bi bi-skip-end"></i>
+        </button>
+        <div class="chapter-info">
+            <input id="chapterProgress" onchange="jumpToChapter()"></input>/&nbsp<span
+                id="totalChapters">1</span>
+        </div>
+        <button id="nextChapter" class="btn btn-link" onclick="nextChapter()" disabled>
+            <span class="d-none d-md-inline">下一章</span>
+            <i class="bi bi-chevron-right"></i>
+        </button>
     </div>
 </div>
 
@@ -782,7 +799,9 @@
         hideAllPanels();
         const panel = document.getElementById('excerptsPanel');
         panel.classList.toggle('d-none');
-        displayExcerpts(excerpts)
+        if (!panel.classList.contains('d-none')) {
+            displayExcerpts(excerpts)
+        }
     }
 
     function toggleTemplates() {
@@ -827,8 +846,11 @@
         hideAllPanels();
         const panel = document.getElementById('sensitiveWordsPanel');
         panel.classList.toggle('d-none');
-        showSensitiveWords();
-        applySensitiveWordFilter(currentBook.currentChapterData);
+        if (!panel.classList.contains('d-none')) {
+            showSensitiveWords();
+        } else {
+            applySensitiveWordFilter(currentBook.currentChapterData);
+        }
     }
 
     function hideAllPanels() {
@@ -1268,7 +1290,8 @@
                         tooltipTemplateClicked();
                         break;
                     case 'rewrite':
-                        tooltipRewriteClicked();
+                        toggleRewrite();
+                        startRewrite();
                         break;
                     case 'sensitive':
                         tooltipSensitiveClicked();
@@ -1715,7 +1738,7 @@
 
         const names = new Set();
         const cleanContent = content.replace(/[\s\.,，。!！?？;；:：、（）()《》""''"“”]/g, '');
-        
+
         // 预定义一些常见的非名字词语，用于过滤误识别
         const commonWords = new Set(['今天', '明天', '昨天', '我们', '你们', '他们', '这个', '那个', '这里', '那里']);
         const noendings = new Set([
@@ -1724,19 +1747,19 @@
             '看', '见', '听', '到', '想', '着', '了', '吗', '呢', '吧', '啊', '呀', '哦', '嗯', '与', '哼', '嘿',
             '嘻', '哈', '呵', '嘿', '咦', '哇', '哎', '唉', '哟', '喂', '喔', '噢', '嗨', '咳', '咯', '嗯', '唔',
             '嗷', '哼', '哦', '啊', '呀', '哎', '唉', '哟', '喂', '喔', '噢', '嗨', '咳', '咯', '嗯', '唔', '嗷']);
-        
+
         for (let i = 0; i < cleanContent.length; i++) {
             // 检查所有可能的2-4字符组合
             for (let len = 2; len <= 4 && i + len <= cleanContent.length; len++) {
                 const candidate = cleanContent.substring(i, i + len);
-                
+
                 // 基本验证：全中文且不在常见词语列表中
                 if (!isChineseCharacters(candidate) || commonWords.has(candidate) || noendings.has(candidate[len - 1])) {
                     continue;
                 }
-                
+
                 let isValidName = false;
-                
+
                 if (len === 2) {
                     // 2字符：单姓+单名
                     const surname = candidate[0];
@@ -1747,7 +1770,7 @@
                     // 3字符：可能是单姓+双名 或 复姓+单名
                     const singleSurname = candidate[0];
                     const compoundSurname = candidate.substring(0, 2);
-                    
+
                     if (surnames.has(singleSurname) || surnames.has(compoundSurname)) {
                         isValidName = true;
                     }
@@ -1776,7 +1799,7 @@
         displayKeywordsList(suggested_keywords);
     }
 
-    function displayKeywordsList(suggestedKeywords, checked=false) {
+    function displayKeywordsList(suggestedKeywords, checked = false) {
         const container = document.getElementById('keywordsList');
         currentKeywords = [];
 
@@ -1837,14 +1860,15 @@
 
             // 更新显示
             const container = document.getElementById('keywordsList');
-            container.innerHTML += `
-                <div class="d-flex align-items-center mb-2">
-                    <input type="checkbox" class="form-check-input me-2" checked 
-                           onchange="toggleKeyword('${key}', '${value}')">
-                    <label class="form-check-label me-2">${key}:</label>
-                    <span class="text-primary">${value}</span>
-                </div>
+            const kwditem = document.createElement('div');
+            kwditem.classList.add('d-flex', 'align-items-center', 'mb-2');
+            kwditem.innerHTML = `
+                <input type="checkbox" class="form-check-input me-2" checked 
+                       onchange="toggleKeyword('${key}', '${value}')">
+                <label class="form-check-label me-2">${key}:</label>
+                <span class="text-primary">${value}</span>
             `;
+            container.appendChild(kwditem);
             document.getElementById('customKeywordValue').value = '';
         } else {
             showAlert('在模板内容中未找到指定文本', 'warning');
@@ -1888,7 +1912,7 @@
         if (!token) return;
 
         try {
-            const response = await fetch(`/api/templates/${templateId??""}`, {
+            const response = await fetch(`/api/templates/${templateId ?? ""}`, {
                 method: templateId ? 'PUT' : 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1919,7 +1943,7 @@
 
     function cancelCreateTemplate() {
         if (document.getElementById('createTemplateForm').templateId) {
-            document.getElementById('createTemplateForm').removeAttribute('templateId');
+            delete(document.getElementById('createTemplateForm').templateId);
         }
         document.getElementById('templateName').value = '';
         document.getElementById('templateContent').value = '';
@@ -1961,7 +1985,7 @@
         }
 
         container.innerHTML = templates.map(template => `
-            <div class="template-item mb-3 p-3 border rounded" style="max-width: 300px;">
+            <div class="template-item mb-3 p-3 border rounded">
                 <div class="d-flex justify-content-between align-items-start">
                     <div class="flex-grow-1">
                         <div class="btn-group btn-group-sm hover-actions" style="float: right;">
@@ -2162,6 +2186,8 @@
 
     let currentRewriteType = '';
     let currentRewritePosition = 0;
+    let chapterRewrites = {};
+    let selectedTags = [];
 
     function startRewrite() {
         const selection = window.getSelection();
@@ -2173,26 +2199,31 @@
         }
 
         currentRewriteType = 'rewrite';
+        document.getElementById('rewriteBtn').classList.replace('btn-outline-primary', 'btn-primary');
+        document.getElementById('insertBtn').classList.replace('btn-primary', 'btn-outline-primary');
         document.getElementById('originalContent').value = selectedText;
-        document.getElementById('originalContent').parentElement.classList.remove('d-none');
+        document.getElementById('originalContentContainer').classList.remove('d-none');
         document.getElementById('rewrittenContent').value = '';
         document.getElementById('rewriteForm').classList.remove('d-none');
-        document.getElementById('templateSelector').style.display = 'block';
 
         // 计算选中文本在章节中的位置
         const range = selection.getRangeAt(0);
         currentRewritePosition = range.startOffset;
+
+        // 加载模板
+        loadTemplatesForRewrite();
     }
 
     function startInsert() {
         const selection = window.getSelection();
 
         currentRewriteType = 'insert';
+        document.getElementById('rewriteBtn').classList.replace('btn-primary', 'btn-outline-primary');
+        document.getElementById('insertBtn').classList.replace('btn-outline-primary', 'btn-primary');
         document.getElementById('originalContent').value = '';
-        document.getElementById('originalContent').parentElement.classList.add('d-none');
+        document.getElementById('originalContentContainer').classList.add('d-none');
         document.getElementById('rewrittenContent').value = '';
         document.getElementById('rewriteForm').classList.remove('d-none');
-        document.getElementById('templateSelector').style.display = 'block';
 
         // 计算插入位置
         if (selection.rangeCount > 0) {
@@ -2201,28 +2232,163 @@
         } else {
             currentRewritePosition = 0;
         }
+
+        // 加载模板
+        loadTemplatesForRewrite();
     }
 
     async function loadTemplatesForRewrite() {
         if (userTemplates.length === 0) {
             await loadUserTemplates();
         }
-        const select = document.getElementById('templateSelect');
-        select.innerHTML = '<option value="">选择模板</option>' +
-            userTemplates.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+        updateTagFilters();
+        updateTemplateSelect();
     }
 
-    async function applySelectedTemplate() {
-        const templateId = document.getElementById('templateSelect').value;
-        if (!templateId) {
-            showAlert('请选择一个模板', 'warning');
+    // 更新标签过滤器
+    function updateTagFilters() {
+        const allTags = new Set();
+        userTemplates.forEach(template => {
+            if (template.tags && Array.isArray(template.tags)) {
+                template.tags.forEach(tag => allTags.add(tag));
+            }
+        });
+
+        const tagFiltersDiv = document.getElementById('tagFilters');
+        if (allTags.size === 0) {
+            tagFiltersDiv.innerHTML = '<small class="text-muted">暂无标签</small>';
             return;
         }
 
-        await useTemplate(parseInt(templateId));
+        tagFiltersDiv.innerHTML = Array.from(allTags).map(tag => `
+            <button class="btn btn-sm btn-outline-secondary tag-filter" 
+                    data-tag="${tag}" 
+                    onclick="toggleTagFilter('${tag}')">
+                ${tag}
+            </button>
+        `).join('');
     }
 
-    async function saveRewrite() {
+    // 切换标签过滤
+    function toggleTagFilter(tag) {
+        const index = selectedTags.indexOf(tag);
+        if (index > -1) {
+            selectedTags.splice(index, 1);
+        } else {
+            selectedTags.push(tag);
+        }
+
+        // 更新按钮样式
+        document.querySelectorAll('.tag-filter').forEach(btn => {
+            if (btn.dataset.tag === tag) {
+                if (selectedTags.includes(tag)) {
+                    btn.classList.remove('btn-outline-secondary');
+                    btn.classList.add('btn-primary');
+                } else {
+                    btn.classList.remove('btn-primary');
+                    btn.classList.add('btn-outline-secondary');
+                }
+            }
+        });
+
+        updateTemplateSelect();
+    }
+
+    // 更新模板选择下拉框
+    function updateTemplateSelect() {
+        const select = document.getElementById('templateSelect');
+
+        // 过滤模板
+        let filteredTemplates = userTemplates;
+        if (selectedTags.length > 0) {
+            filteredTemplates = userTemplates.filter(template => {
+                if (!template.tags || !Array.isArray(template.tags)) return false;
+                return selectedTags.every(tag => template.tags.includes(tag));
+            });
+        }
+
+        if (filteredTemplates.length === 0) {
+            select.innerHTML = '<option value="">没有符合条件的模板</option>';
+            return;
+        }
+
+        select.innerHTML = '<option value="">选择模板</option>' +
+            filteredTemplates.map(t => `<option value="${t.id}">${t.name} - ${t.description}</option>`).join('');
+    }
+
+    // 模板选择事件
+    function onTemplateSelected() {
+        const templateId = document.getElementById('templateSelect').value;
+
+        if (!templateId) {
+            document.getElementById('keywordInputs').classList.add('d-none');
+            return;
+        }
+
+        const currentSelectedTemplate = userTemplates.find(t => t.id === parseInt(templateId));
+
+        if (!currentSelectedTemplate) return;
+
+        // 显示关键词输入区域
+        const keywordInputsDiv = document.getElementById('keywordInputs');
+        const keywordsListDiv = document.getElementById('keywordInputsList');
+
+        if (currentSelectedTemplate.keywords && currentSelectedTemplate.keywords.length > 0) {
+            keywordInputsDiv.classList.remove('d-none');
+
+            keywordsListDiv.innerHTML = currentSelectedTemplate.keywords.map(keyword => `
+                <div class="mb-2 d-flex" style="max-width: 150px;">
+                    <label class="form-label small">${keyword}:</label>
+                    <input type="text" class="form-control form-control-sm" 
+                           onchange="applyTemplateWithKeywords()"
+                           data-keyword="${keyword}" 
+                           placeholder="${keyword}的值">
+                </div>
+            `).join('');
+        } else {
+            keywordInputsDiv.classList.add('d-none');
+        }
+        document.getElementById('rewrittenContent').value = currentSelectedTemplate.content;
+    }
+
+    // 应用模板并替换关键词
+    function applyTemplateWithKeywords() {
+        const templateId = document.getElementById('templateSelect').value;
+        if (!templateId) {
+            showAlert('请先选择模板', 'warning');
+            return;
+        }
+
+        const currentSelectedTemplate = userTemplates.find(t => t.id === parseInt(templateId));
+        if (!currentSelectedTemplate) {
+            showAlert('请先选择模板', 'warning');
+            return;
+        }
+
+        let content = currentSelectedTemplate.content;
+
+        // 收集关键词值
+        const keywordInputs = document.querySelectorAll('#keywordInputsList input[data-keyword]');
+        const keywordValues = {};
+
+        keywordInputs.forEach(input => {
+            const keyword = input.dataset.keyword;
+            const value = input.value.trim();
+            if (value) {
+                keywordValues[keyword] = value;
+            }
+        });
+
+        // 替换关键词
+        Object.entries(keywordValues).forEach(([keyword, value]) => {
+            const regex = new RegExp(`\\{${keyword}\\}`, 'g');
+            content = content.replace(regex, value);
+        });
+
+        document.getElementById('rewrittenContent').value = content;
+    }
+
+    function saveRewrite() {
         const originalContent = document.getElementById('originalContent').value;
         const rewrittenContent = document.getElementById('rewrittenContent').value.trim();
 
@@ -2231,47 +2397,75 @@
             return;
         }
 
-        const token = localStorage.getItem('token');
-        if (!token) return;
+        const chapterId = chapters[currentChapterIndex].id;
 
-        try {
-            const response = await fetch('/api/rewrites/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    book_id: currentBook.id,
-                    chapter_id: chapters[currentChapterIndex].id,
-                    original_content: originalContent,
-                    rewritten_content: rewrittenContent,
-                    position: currentRewritePosition,
-                    type: currentRewriteType
-                })
-            });
-
-            if (response.ok) {
-                showAlert('重写保存成功', 'success');
-                cancelRewrite();
-            } else {
-                const error = await response.json();
-                showAlert(error.detail || '保存重写失败', 'danger');
-            }
-        } catch (error) {
-            console.error('保存重写失败:', error);
-            showAlert('保存重写失败', 'danger');
+        // 初始化章节重写记录
+        if (!chapterRewrites[chapterId]) {
+            chapterRewrites[chapterId] = [];
         }
+
+        // 添加重写记录
+        chapterRewrites[chapterId].push({
+            type: currentRewriteType,
+            original: originalContent,
+            rewritten: rewrittenContent,
+            position: currentRewritePosition,
+            timestamp: new Date().toISOString()
+        });
+
+        applyRewriteToChapter();
+        cancelRewrite();
     }
 
     function cancelRewrite() {
         document.getElementById('rewriteForm').classList.add('d-none');
         document.getElementById('originalContent').value = '';
         document.getElementById('rewrittenContent').value = '';
-        document.getElementById('templateSelector').style.display = 'none';
+        document.getElementById('keywordInputs').classList.add('d-none');
+        document.getElementById('templateSelect').value = '';
         currentRewriteType = '';
         currentRewritePosition = 0;
+        selectedTags = [];
+
+        // 重置标签过滤按钮
+        document.querySelectorAll('.tag-filter').forEach(btn => {
+            btn.classList.remove('btn-secondary');
+            btn.classList.add('btn-outline-secondary');
+        });
         hideAllPanels();
+    }
+
+    // 应用所有重写到章节内容
+    function applyRewriteToChapter() {
+        const chapterId = chapters[currentChapterIndex].id;
+        const rewrites = chapterRewrites[chapterId] || [];
+
+        if (rewrites.length === 0) {
+            showAlert('当前章节没有重写记录', 'warning');
+            return;
+        }
+
+        let content = currentBook.currentChapterData.content;
+
+        // 按位置排序（从后往前应用，避免位置偏移）
+        const sortedRewrites = [...rewrites].sort((a, b) => b.position - a.position);
+
+        sortedRewrites.forEach(rewrite => {
+            if (rewrite.type === 'rewrite') {
+                // 替换原文
+                content = content.replace(rewrite.original, rewrite.rewritten);
+            } else if (rewrite.type === 'insert') {
+                // 插入新内容
+                const pos = rewrite.position || 0;
+                content = content.substring(0, pos) + rewrite.rewritten + content.substring(pos);
+            }
+        });
+
+        // 更新章节内容显示
+        currentBook.currentChapterData.content = content;
+        applySensitiveWordFilter(currentBook.currentChapterData);
+
+        showAlert(`已应用 ${rewrites.length} 条重写记录`, 'success');
     }
 
     // ==================== 工具提示相关函数 ====================
@@ -2284,27 +2478,8 @@
         }
 
         // 打开模板面板并填充选中的文本
+        cancelCreateTemplate();
         toggleTemplates();
-        setTimeout(() => {
-            showCurrentSelectedTemplateForm();
-        }, 100);
-    }
-
-    function tooltipRewriteClicked() {
-        // 打开重写面板并设置为重写模式
-        toggleRewrite();
-        setTimeout(() => {
-            const selection = window.getSelection();
-            currentRewriteType = 'insert';
-            if (selection.rangeCount > 0) {
-                const range = selection.getRangeAt(0);
-                currentRewritePosition = range.startOffset;
-            }
-            document.getElementById('originalContent').value = currentSelectedText;
-            document.getElementById('rewrittenContent').value = '';
-            document.getElementById('rewriteForm').classList.remove('d-none');
-            document.getElementById('templateSelector').style.display = 'block';
-        }, 100);
     }
 
     function tooltipSensitiveClicked() {

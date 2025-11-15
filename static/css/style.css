@@ -848,12 +848,16 @@ body.offline::before {
     top: 110px;
     right: 80px;
     width: 400px;
-    max-height: 500px;
+    max-height: 70vh;
     background: white;
+    border: 1px solid #dee2e6;
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
     z-index: 999;
-    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: slideIn 0.3s ease-out;
+    transition: all 0.3s ease;
 }
 
 .theme-dark .floating-panel,
@@ -863,9 +867,13 @@ body.offline::before {
 }
 
 .panel-header {
-    padding: 12px 16px;
-    border-bottom: 1px solid #eee;
     background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .theme-dark .panel-header,
@@ -994,6 +1002,8 @@ body.offline::before {
     background: #fff;
     border: 1px solid #dee2e6;
     transition: border-color 0.2s;
+    min-width: 90px;
+    max-width: 300px;
 }
 
 .template-item:hover {
@@ -1043,25 +1053,6 @@ body.offline::before {
     margin: 0.5rem 0;
 }
 
-/* 浮动面板增强样式 */
-.floating-panel {
-    max-height: 70vh;
-    overflow-y: auto;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.panel-header {
-    background: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
-    padding: 0.75rem 1rem;
-    font-weight: 600;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
 .panel-header h6 {
     margin: 0;
 }
@@ -1071,6 +1062,8 @@ body.offline::before {
 }
 
 .panel-body {
+    overflow-y: auto;
+    flex: 1;
     padding: 1rem;
 }
 
@@ -1173,11 +1166,6 @@ body.offline::before {
     }
 }
 
-/* 动画效果 */
-.floating-panel {
-    animation: slideIn 0.3s ease-out;
-    transition: all 0.3s ease;
-}
 
 @keyframes slideIn {
     from {
