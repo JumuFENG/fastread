@@ -437,12 +437,20 @@ body {
     background-color: #dc3545;
 }
 
-.source-actions {
+.hover-actions {
     opacity: 0;
     transition: opacity 0.2s;
 }
 
-.source-item:hover .source-actions {
+.source-item:hover .hover-actions {
+    opacity: 1;
+}
+
+.excerpt-item:hover .hover-actions {
+    opacity: 1;
+}
+
+.template-item:hover .hover-actions {
     opacity: 1;
 }
 
@@ -866,18 +874,7 @@ body.offline::before {
     border-bottom-color: #555;
 }
 
-.panel-body {
-    padding: 16px;
-    max-height: 400px;
-    overflow-y: auto;
-}
-
 /* 摘录列表样式 */
-.excerpts-list {
-    max-height: 300px;
-    overflow-y: auto;
-}
-
 .excerpt-item {
     padding: 12px;
     border: 1px solid #eee;
@@ -979,21 +976,17 @@ body.offline::before {
 .excerpt-content {
     font-style: italic;
     color: #495057;
+    text-indent: 2em;
+}
+
+.excerpt-content p {
+    margin-bottom: 0;
 }
 
 .excerpt-meta {
     border-top: 1px solid #dee2e6;
     padding-top: 0.5rem;
     margin-top: 0.5rem;
-}
-
-.excerpt-actions {
-    opacity: 0;
-    transition: opacity 0.2s;
-}
-
-.excerpt-item:hover .excerpt-actions {
-    opacity: 1;
 }
 
 /* 模板功能样式 */

@@ -130,7 +130,7 @@
             </div>
 
             <!-- 模板管理面板 -->
-            <div id="templatesPanel" class="floating-panel d-none">
+            <div id="templatesPanel" class="floating-panel d-none" style="width: 70%;">
                 <div class="panel-header">
                     <h6>模板管理</h6>
                     <button type="button" class="btn-close" onclick="hideAllPanels()" aria-label="关闭"></button>
@@ -143,7 +143,7 @@
                     </div>
 
                     <!-- 模板列表 -->
-                    <div id="templatesList">
+                    <div id="templatesList" class="d-flex flex-wrap gap-2">
                         <!-- 模板列表 -->
                     </div>
 
@@ -180,7 +180,7 @@
                             <button class="btn btn-success btn-sm" onclick="saveTemplate()">
                                 <i class="bi bi-save"></i> 保存
                             </button>
-                            <button id="cancelTemplateButton" class="btn btn-secondary btn-sm d-none" onclick="cancelCreateTemplate()">
+                            <button class="btn btn-secondary btn-sm" onclick="cancelCreateTemplate()">
                                 取消
                             </button>
                         </div>
@@ -189,7 +189,7 @@
             </div>
 
             <!-- 重写/创作面板 -->
-            <div id="rewritePanel" class="floating-panel d-none">
+            <div id="rewritePanel" class="floating-panel d-none" style="width: 70%;">
                 <div class="panel-header">
                     <h6>重写/创作</h6>
                     <button type="button" class="btn-close" onclick="hideAllPanels()" aria-label="关闭"></button>
@@ -202,9 +202,6 @@
                         <button class="btn btn-outline-primary btn-sm" onclick="startInsert()">
                             <i class="bi bi-plus-circle"></i> 插入新内容
                         </button>
-                        <button class="btn btn-outline-info btn-sm" onclick="loadUserRewrites()">
-                            <i class="bi bi-list"></i> 我的重写
-                        </button>
                     </div>
 
                     <!-- 重写表单 -->
@@ -214,9 +211,9 @@
                             <textarea class="form-control" id="originalContent" rows="3" readonly></textarea>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">重写内容</label>
+                            <label class="form-label">新内容</label>
                             <textarea class="form-control" id="rewrittenContent" rows="4"
-                                placeholder="输入重写后的内容"></textarea>
+                                placeholder="输入重写后的内容/新内容"></textarea>
                         </div>
                         <div class="mb-3" id="templateSelector" style="display: none;">
                             <label class="form-label">应用模板</label>
@@ -798,25 +795,31 @@
         hideAllPanels();
         const panel = document.getElementById('templatesPanel');
         panel.classList.toggle('d-none');
-        createTemplateFromSelection();
         if (!panel.classList.contains('d-none')) {
+            createTemplateFromSelection();
             loadUserTemplates();
         }
     }
 
     function toggleRewrite() {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            showAlert('重写功能需要登录后使用', 'warning');
-            return;
-        }
-
         hideAllPanels();
         const panel = document.getElementById('rewritePanel');
         panel.classList.toggle('d-none');
         if (!panel.classList.contains('d-none')) {
-            loadUserRewrites();
-            loadTemplatesForRewrite();
+            if (!currentRewriteType) {
+                loadTemplatesForRewrite();
+                const selection = window.getSelection();
+                currentRewriteType =  selection.toString().trim() ? 'rewrite' : 'insert';
+                if (selection.rangeCount > 0) {
+                    const range = selection.getRangeAt(0);
+                    currentRewritePosition = range.startOffset;
+                }
+            }
+            if (currentRewriteType === 'rewrite') {
+                startRewrite();
+            } else {
+                startInsert();
+            }
         }
     }
 
@@ -1342,11 +1345,13 @@
                         book_id: currentBook.id,
                         chapter_id: chapters[currentChapterIndex].id,
                         content: currentSelectedText,
-                        note: ''
+                        note: currentBook.title + ' by: ' + currentBook.author
                     })
                 });
 
                 if (response.ok) {
+                    const newExcerpt = await response.json();
+                    excerpts.push(newExcerpt);
                     showAlert('摘录保存成功', 'success');
                 } else {
                     throw new Error('保存失败');
@@ -1590,13 +1595,10 @@
 
         container.innerHTML = excerptList.map(excerpt => `
             <div class="excerpt-item mb-2 p-2 border rounded">
-                <div class="excerpt-content">${excerpt.content}</div>
+                <div class="excerpt-content"><p>${excerpt.content.replace(/[\n]+/g, '</p><p>')}</p></div>
                 <div class="excerpt-meta text-muted small mt-1">
-                    ${new Date(excerpt.created_at).toLocaleString()}
-                    ${excerpt.local ? '<span class="badge bg-secondary">本地</span>' : '<span class="badge bg-primary">服务器</span>'}
-                </div>
-                <div class="excerpt-actions mt-1">
-                    <button class="btn btn-outline-danger btn-sm" onclick="deleteExcerpt(${excerpt.id}, ${excerpt.local || false})">
+                    ${new Date(excerpt.created_at).toLocaleString()} ${excerpt.note}
+                    <button class="btn btn-outline-danger btn-sm hover-actions" onclick="deleteExcerpt(${excerpt.id}, ${excerpt.local || false})">
                         <i class="bi bi-trash"></i>
                     </button>
                 </div>
@@ -1644,20 +1646,17 @@
         const selectedText = selection.toString().trim();
 
         if (!selectedText) {
-            showAlert('请先选择要创建模板的文本', 'warning');
             return;
         }
 
         currentSelectedText = selectedText;
         showCurrentSelectedTemplateForm();
-        document.getElementById('cancelTemplateButton').classList.add('d-none');
     }
 
     function editTemplate(templateId) {
         const template = userTemplates.find(t => t.id === templateId);
         if (template) {
             currentSelectedText = template.content;
-            document.getElementById('templatesPanel').style.width = '70%';
             document.getElementById('createTemplateForm').classList.remove('d-none');
             document.getElementById('templateName').value = template.name;
             document.getElementById('templateContent').value = template.content;
@@ -1679,12 +1678,10 @@
             container.innerHTML = html;
             document.getElementById('templateDescription').value = template.description;
             document.getElementById('createTemplateForm').templateId = template.id;
-            document.getElementById('cancelTemplateButton').classList.remove('d-none');
         }
     }
 
     function showCurrentSelectedTemplateForm() {
-        document.getElementById('templatesPanel').style.width = '70%';
         document.getElementById('templateContent').value = currentSelectedText;
         document.getElementById('createTemplateForm').classList.remove('d-none');
         // 自动提取关键词
@@ -1924,7 +1921,6 @@
         if (document.getElementById('createTemplateForm').templateId) {
             document.getElementById('createTemplateForm').removeAttribute('templateId');
         }
-        document.getElementById('templatesPanel').style.width = '';
         document.getElementById('templateName').value = '';
         document.getElementById('templateContent').value = '';
         document.getElementById('templateTagInput').value = '';
@@ -1932,6 +1928,7 @@
         document.getElementById('keywordsList').innerHTML = '';
         document.getElementById('tagsList').innerHTML = '';
         currentKeywords = [];
+        hideAllPanels();
     }
 
     async function loadUserTemplates() {
@@ -1964,9 +1961,17 @@
         }
 
         container.innerHTML = templates.map(template => `
-            <div class="template-item mb-3 p-3 border rounded">
+            <div class="template-item mb-3 p-3 border rounded" style="max-width: 300px;">
                 <div class="d-flex justify-content-between align-items-start">
                     <div class="flex-grow-1">
+                        <div class="btn-group btn-group-sm hover-actions" style="float: right;">
+                            <button class="btn btn-outline-primary" onclick="editTemplate(${template.id})">
+                                编辑
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="deleteTemplate(${template.id})">
+                                删除
+                            </button>
+                        </div>
                         <h6>${template.name}</h6>
                         <p class="text-muted small mb-2">${template.description || '无描述'}</p>
                         <div class="mb-2">
@@ -1975,14 +1980,6 @@
                         <div class="mb-2">
                             <small class="text-muted">关键词: ${template.keywords.join(', ')}</small>
                         </div>
-                    </div>
-                    <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-primary" onclick="editTemplate(${template.id})">
-                            编辑
-                        </button>
-                        <button class="btn btn-outline-danger" onclick="deleteTemplate(${template.id})">
-                            删除
-                        </button>
                     </div>
                 </div>
             </div>
@@ -2177,6 +2174,7 @@
 
         currentRewriteType = 'rewrite';
         document.getElementById('originalContent').value = selectedText;
+        document.getElementById('originalContent').parentElement.classList.remove('d-none');
         document.getElementById('rewrittenContent').value = '';
         document.getElementById('rewriteForm').classList.remove('d-none');
         document.getElementById('templateSelector').style.display = 'block';
@@ -2191,6 +2189,7 @@
 
         currentRewriteType = 'insert';
         document.getElementById('originalContent').value = '';
+        document.getElementById('originalContent').parentElement.classList.add('d-none');
         document.getElementById('rewrittenContent').value = '';
         document.getElementById('rewriteForm').classList.remove('d-none');
         document.getElementById('templateSelector').style.display = 'block';
@@ -2205,25 +2204,12 @@
     }
 
     async function loadTemplatesForRewrite() {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-
-        try {
-            const response = await fetch('/api/templates/', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (response.ok) {
-                const templates = await response.json();
-                const select = document.getElementById('templateSelect');
-                select.innerHTML = '<option value="">选择模板</option>' +
-                    templates.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
-            }
-        } catch (error) {
-            console.error('加载模板失败:', error);
+        if (userTemplates.length === 0) {
+            await loadUserTemplates();
         }
+        const select = document.getElementById('templateSelect');
+        select.innerHTML = '<option value="">选择模板</option>' +
+            userTemplates.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
     }
 
     async function applySelectedTemplate() {
@@ -2268,7 +2254,6 @@
             if (response.ok) {
                 showAlert('重写保存成功', 'success');
                 cancelRewrite();
-                loadUserRewrites();
             } else {
                 const error = await response.json();
                 showAlert(error.detail || '保存重写失败', 'danger');
@@ -2286,87 +2271,7 @@
         document.getElementById('templateSelector').style.display = 'none';
         currentRewriteType = '';
         currentRewritePosition = 0;
-    }
-
-    async function loadUserRewrites() {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-
-        try {
-            const response = await fetch(`/api/rewrites/?chapter_id=${chapters[currentChapterIndex].id}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (response.ok) {
-                const rewrites = await response.json();
-                displayRewrites(rewrites);
-            }
-        } catch (error) {
-            console.error('加载重写失败:', error);
-        }
-    }
-
-    function displayRewrites(rewrites) {
-        const container = document.getElementById('rewritesList');
-
-        if (rewrites.length === 0) {
-            container.innerHTML = '<div class="text-center text-muted">暂无重写内容</div>';
-            return;
-        }
-
-        container.innerHTML = rewrites.map(rewrite => `
-            <div class="rewrite-item mb-3 p-3 border rounded">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="flex-grow-1">
-                        <div class="mb-2">
-                            <span class="badge ${rewrite.type === 'rewrite' ? 'bg-primary' : 'bg-success'}">
-                                ${rewrite.type === 'rewrite' ? '重写' : '插入'}
-                            </span>
-                        </div>
-                        ${rewrite.original_content ? `
-                            <div class="mb-2">
-                                <small class="text-muted">原文:</small>
-                                <div class="text-muted">${rewrite.original_content}</div>
-                            </div>
-                        ` : ''}
-                        <div class="mb-2">
-                            <small class="text-muted">重写:</small>
-                            <div>${rewrite.rewritten_content}</div>
-                        </div>
-                        <small class="text-muted">${new Date(rewrite.created_at).toLocaleString()}</small>
-                    </div>
-                    <button class="btn btn-outline-danger btn-sm" onclick="deleteRewrite(${rewrite.id})">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    async function deleteRewrite(rewriteId) {
-        if (!confirm('确定要删除这个重写吗？')) return;
-
-        const token = localStorage.getItem('token');
-        if (!token) return;
-
-        try {
-            const response = await fetch(`/api/rewrites/${rewriteId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (response.ok) {
-                showAlert('重写删除成功', 'success');
-                loadUserRewrites();
-            }
-        } catch (error) {
-            console.error('删除重写失败:', error);
-            showAlert('删除重写失败', 'danger');
-        }
+        hideAllPanels();
     }
 
     // ==================== 工具提示相关函数 ====================
@@ -2386,27 +2291,19 @@
     }
 
     function tooltipRewriteClicked() {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            showAlert('重写功能需要登录后使用', 'warning');
-            return;
-        }
-
         // 打开重写面板并设置为重写模式
         toggleRewrite();
         setTimeout(() => {
-            currentRewriteType = 'rewrite';
-            document.getElementById('originalContent').value = currentSelectedText;
-            document.getElementById('rewrittenContent').value = '';
-            document.getElementById('rewriteForm').classList.remove('d-none');
-            document.getElementById('templateSelector').style.display = 'block';
-
-            // 计算选中文本的位置
             const selection = window.getSelection();
+            currentRewriteType = 'insert';
             if (selection.rangeCount > 0) {
                 const range = selection.getRangeAt(0);
                 currentRewritePosition = range.startOffset;
             }
+            document.getElementById('originalContent').value = currentSelectedText;
+            document.getElementById('rewrittenContent').value = '';
+            document.getElementById('rewriteForm').classList.remove('d-none');
+            document.getElementById('templateSelector').style.display = 'block';
         }, 100);
     }
 
