@@ -973,6 +973,13 @@ body.offline::before {
     font-style: italic;
     color: #495057;
     text-indent: 2em;
+    max-height: 300px;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.excerpt-content.expanded {
+    max-height: none;
 }
 
 .excerpt-content p {
@@ -983,6 +990,10 @@ body.offline::before {
     border-top: 1px solid #dee2e6;
     padding-top: 0.5rem;
     margin-top: 0.5rem;
+}
+
+.excerpt-note {
+    line-height: 1.6;
 }
 
 /* 模板功能样式 */
@@ -1013,6 +1024,26 @@ body.offline::before {
     padding: 0.125rem 0.25rem;
     border-radius: 3px;
     font-family: monospace;
+}
+
+.template-content {
+    line-height: 1.6;
+    max-height: 150px;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.template-content.expanded {
+    max-height: none;
+}
+
+.tag-filter {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tag-filter:hover {
+    transform: translateY(-1px);
 }
 
 /* 重写功能样式 */

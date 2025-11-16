@@ -11,9 +11,6 @@
     <button class="btn btn-outline-secondary btn-sm" onclick="toggleSettings()" title="阅读设置">
         <i class="bi bi-gear"></i>
     </button>
-    <button class="btn btn-outline-success btn-sm" onclick="toggleExcerpts()" title="摘录管理">
-        <i class="bi bi-bookmark"></i>
-    </button>
     <button class="btn btn-outline-info btn-sm" onclick="toggleTemplates()" title="模板管理">
         <i class="bi bi-file-text"></i>
     </button>
@@ -112,19 +109,6 @@
                                 style="width: 70px; display: inline-block; margin-left: 10px;"
                                 onchange="updateAutoScrollSpeed()">
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 摘录管理面板 -->
-            <div id="excerptsPanel" class="floating-panel d-none">
-                <div class="panel-header">
-                    <h6>摘录管理</h6>
-                    <button type="button" class="btn-close" onclick="hideAllPanels()" aria-label="关闭"></button>
-                </div>
-                <div class="panel-body">
-                    <div id="excerptsList" class="excerpts-list">
-                        <!-- 摘录列表 -->
                     </div>
                 </div>
             </div>
@@ -368,7 +352,6 @@
     let lastSavedProgress = null; // 跟踪上次保存的进度
     let chapterDisplayRange = { start: 0, end: 20 }; // 默认显示前20章
     const CHAPTER_DISPLAY_COUNT = 20; // 每次显示的章节数量
-    let excerpts = [];
     let sensitiveWords = {};
     let autoScrollEnabled = false;
     let autoScrollSpeed = 30;
@@ -381,7 +364,6 @@
         loadSensitiveWords();
     });
     loadChapters(bookId).then(() => {
-        loadExcerpts();
         loadReadingProgress(bookId);
     });
 
@@ -795,15 +777,6 @@
         }
     }
 
-    function toggleExcerpts() {
-        hideAllPanels();
-        const panel = document.getElementById('excerptsPanel');
-        panel.classList.toggle('d-none');
-        if (!panel.classList.contains('d-none')) {
-            displayExcerpts(excerpts)
-        }
-    }
-
     function toggleTemplates() {
         const token = localStorage.getItem('token');
         if (!token) {
@@ -855,7 +828,6 @@
 
     function hideAllPanels() {
         document.getElementById('settingsPanel').classList.add('d-none');
-        document.getElementById('excerptsPanel').classList.add('d-none');
         document.getElementById('templatesPanel').classList.add('d-none');
         document.getElementById('rewritePanel').classList.add('d-none');
         document.getElementById('sensitiveWordsPanel').classList.add('d-none');
@@ -1340,17 +1312,6 @@
         });
     }
 
-    function saveSelectedText() {
-        const selection = window.getSelection();
-        const selectedText = selection.toString().trim();
-
-        if (!selectedText) {
-            showAlert('请先选择要摘录的文本', 'warning');
-            return;
-        }
-
-        saveExcerpt(selectedText);
-    }
 
     async function saveExcerpt() {
         const token = localStorage.getItem('token');
@@ -1374,7 +1335,6 @@
 
                 if (response.ok) {
                     const newExcerpt = await response.json();
-                    excerpts.push(newExcerpt);
                     showAlert('摘录保存成功', 'success');
                 } else {
                     throw new Error('保存失败');
@@ -1393,25 +1353,6 @@
 
         // 清除选择
         window.getSelection().removeAllRanges();
-
-        // 如果摘录面板打开，刷新列表
-        if (!document.getElementById('excerptsPanel').classList.contains('d-none')) {
-            displayExcerpts(excerpts);
-        }
-    }
-
-    function removeExcerpt(id) {
-        excerpts = excerpts.filter(excerpt => excerpt.id !== id);
-        displayExcerpts(excerpts);
-        showAlert('摘录删除成功', 'success');
-    }
-
-    function clearExcerpts() {
-        if (confirm('确定要清空所有摘录吗？')) {
-            excerpts = [];
-            displayExcerpts(excerpts);
-            showAlert('摘录已清空', 'success');
-        }
     }
 
     // 章节跳转功能
@@ -1518,7 +1459,7 @@
 
     // 点击外部关闭面板
     document.addEventListener('click', function (e) {
-        const panels = ['settingsPanel', 'excerptsPanel', 'templatesPanel', 'rewritePanel', 'sensitiveWordsPanel'];
+        const panels = ['settingsPanel', 'templatesPanel', 'rewritePanel', 'sensitiveWordsPanel'];
         const toolbar = document.querySelector('.reader-toolbar');
 
         if (!toolbar.contains(e.target)) {
@@ -1539,125 +1480,6 @@
     window.addEventListener('beforeunload', function () {
         saveReadingProgress(true);
     });
-
-    // ==================== 摘录功能 ====================
-
-    async function saveSelectedText() {
-        const selection = window.getSelection();
-        const selectedText = selection.toString().trim();
-
-        if (!selectedText) {
-            showAlert('请先选择要摘录的文本', 'warning');
-            return;
-        }
-
-        const token = localStorage.getItem('token');
-        if (!token) {
-            return;
-        }
-
-        // 保存到服务器
-        try {
-            const response = await fetch('/api/excerpts/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    book_id: currentBook.id,
-                    chapter_id: chapters[currentChapterIndex].id,
-                    content: selectedText,
-                    note: ''
-                })
-            });
-
-            if (response.ok) {
-                showAlert('摘录保存成功', 'success');
-                displayExcerpts(excerpts);
-                selection.removeAllRanges();
-            } else {
-                throw new Error('保存失败');
-            }
-        } catch (error) {
-            console.error('保存摘录失败:', error);
-            showAlert('保存摘录失败，已保存到本地', 'warning');
-        }
-    }
-
-    async function loadExcerpts() {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            showAlert('请先登录', 'warning');
-            return;
-        }
-
-        try {
-            const response = await fetch(`/api/excerpts/?book_id=${currentBook.id}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (response.ok) {
-                excerpts = await response.json();
-            }
-        } catch (error) {
-            console.error('加载服务器摘录失败:', error);
-            showAlert('加载服务器摘录失败', 'danger');
-        }
-    }
-
-    function displayExcerpts(excerptList) {
-        const container = document.getElementById('excerptsList');
-
-        if (excerptList.length === 0) {
-            container.innerHTML = '<div class="text-center text-muted">暂无摘录</div>';
-            return;
-        }
-
-        container.innerHTML = excerptList.map(excerpt => `
-            <div class="excerpt-item mb-2 p-2 border rounded">
-                <div class="excerpt-content"><p>${excerpt.content.replace(/[\n]+/g, '</p><p>')}</p></div>
-                <div class="excerpt-meta text-muted small mt-1">
-                    ${new Date(excerpt.created_at).toLocaleString()} ${excerpt.note}
-                    <button class="btn btn-outline-danger btn-sm hover-actions" onclick="deleteExcerpt(${excerpt.id}, ${excerpt.local || false})">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    async function deleteExcerpt(excerptId, isLocal) {
-        if (isLocal) {
-            excerpts = excerpts.filter(e => e.id !== excerptId);
-            displayExcerpts(excerpts)
-            showAlert('本地摘录删除成功', 'success');
-            return;
-        }
-
-        const token = localStorage.getItem('token');
-        if (!token) return;
-
-        try {
-            const response = await fetch(`/api/excerpts/${excerptId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (response.ok) {
-                showAlert('摘录删除成功', 'success');
-                await loadExcerpts();
-                displayExcerpts(excerpts);
-            }
-        } catch (error) {
-            console.error('删除摘录失败:', error);
-            showAlert('删除摘录失败', 'danger');
-        }
-    }
 
     // ==================== 模板功能 ====================
 

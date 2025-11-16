@@ -689,6 +689,10 @@ function showAlert(message, type = 'info') {
     }, 3000);
 }
 
+function toggleCssClass(ele, className) {
+    ele.classList.toggle(className);
+}
+
 // 工具函数：格式化日期
 function formatDate(dateString) {
     const date = new Date(dateString);

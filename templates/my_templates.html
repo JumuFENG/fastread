@@ -291,7 +291,7 @@ function displayTemplates(templates) {
                         </button>
                     </div>
                 </div>
-                <div class="template-content p-3 bg-light rounded mb-2">
+                <div class="template-content p-3 bg-light rounded mb-2" onclick="toggleCssClass(this, 'expanded')">
                     <pre class="mb-0" style="white-space: pre-wrap; font-family: inherit;">${template.content}</pre>
                 </div>
                 ${template.keywords && template.keywords.length > 0 ? `
@@ -524,18 +524,4 @@ function formatDate(dateString) {
 }
 </script>
 
-<style>
-.template-content {
-    line-height: 1.6;
-}
-
-.tag-filter {
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.tag-filter:hover {
-    transform: translateY(-1px);
-}
-</style>
 {% endblock %}
