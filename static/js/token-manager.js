@@ -28,10 +28,13 @@ function isTokenExpired() {
     const token = localStorage.getItem('token');
     const expiresAt = localStorage.getItem('token_expires_at');
     
-    if (!token || !expiresAt) {
+    if (!token) {
+        return false;
+    }
+    if (!expiresAt) {
         return true;
     }
-    
+
     const expirationTime = new Date(expiresAt);
     const now = new Date();
     

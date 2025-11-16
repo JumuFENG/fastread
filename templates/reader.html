@@ -279,13 +279,13 @@
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- 章节内容 -->
-        <div id="chapterContent" class="reader-content">
-            <div class="text-center">
-                <div class="spinner-border" role="status">
-                    <span class="visually-hidden">加载中...</span>
+            <!-- 章节内容 -->
+            <div id="chapterContent" class="reader-content">
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">加载中...</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1203,7 +1203,7 @@
     // 摘录功能
     function addTextSelectionListener() {
         document.addEventListener('mouseup', function (e) {
-            if (e.target.closest('.selection-tooltip') || e.target.closest('.floating-panel')) {
+            if (!e.target.closest('.chapter-text')) {
                 return;
             }
             const selection = window.getSelection();

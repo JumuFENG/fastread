@@ -812,7 +812,7 @@ class BaseBookSourceParser(ABC):
                 image_url = match.group(1)
         return image_url
 
-    def get_parser_name(self) -> str:
+    def get_parser_name(self) -> list[str]:
         """获取解析器名称，用于动态加载"""
         name = []
         if self.source_config.get('name'):

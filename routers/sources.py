@@ -4,7 +4,9 @@ from typing import List, Union
 from database import get_db, Book, Chapter
 from pydantic import BaseModel
 import json
-from parsers.parser_loader import BaseBookSourceParser, get_parser_for_source, get_parser_for_url, list_available_parsers
+import httpx
+from parsers.parser_loader import BaseBookSourceParser, get_parser_for_source, get_parser_for_url
+from parsers.parser_loader import delete_parser, list_available_parsers
 
 router = APIRouter()
 
@@ -12,12 +14,16 @@ class BookSourceResponse(BaseModel):
     id: int|str
     name: str
     url: str
+    searchable: bool = True
+    can_delete: bool = False
 
 def parser_to_booksource(parser: BaseBookSourceParser) -> BookSourceResponse:
     return {
         "id": parser.get_parser_name()[0],
         "name": parser.get_parser_name()[-1],
-        "url": parser.base_url
+        "url": parser.base_url,
+        "searchable": bool(parser.search_url),
+        "can_delete": parser.__class__.__name__ == "BaseBookSourceParser"
     }
 
 class BookSourceCreate(BaseModel):
@@ -79,26 +85,58 @@ async def search_books(source_id: int|str, keyword: str, db: Session = Depends(g
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"搜索失败: {str(e)}")
 
-@router.get("/{source_id}", response_model=BookSourceResponse)
+@router.get("/{source_id}", response_model=BookSourceCreate)
 async def get_book_source(source_id: int|str):
     parser = get_parser_for_source(source_id)
     if not parser:
         raise HTTPException(status_code=404, detail="书源不存在")
-    return parser_to_booksource(parser)
+    return {
+        "name": parser.get_parser_name()[-1],
+        "sourcejson": parser.source_config if hasattr(parser, 'source_config') else parser.cfg_template
+    }
 
 @router.put("/{source_id}", response_model=BookSourceResponse)
-async def update_book_source(source_id: int, source: BookSourceCreate, db: Session = Depends(get_db)):
-    return {}
+async def update_book_source(source: BookSourceCreate):
+    return create_book_source(source)
 
-@router.post("/{source_id}/toggle")
-async def toggle_book_source(source_id: int|str):
-    return {"message": "书源状态更新暂未实现"}
+@router.delete("/{source_id}")
+async def delete_book_source(source_id: int|str):
+    try:
+        delete_parser(source_id)
+        return {"message": "书源删除成功"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"删除书源失败: {str(e)}")
 
 @router.post("/{source_id}/test")
-async def test_book_source(source_id: int):
+async def test_book_source(source_id: str):
+    parser = get_parser_for_source(source_id)
+    try:
+        if parser.search_url:
+            books = await parser.search_books('三寸人间')
+            if books and len(books) > 0:
+                return {
+                    "success": True,
+                    "message": "测试成功"
+                }
+        else:
+            response = await httpx.AsyncClient().get(parser.base_url)
+            response.raise_for_status()
+            if response.text:
+                return {
+                    "success": True,
+                    "message": "书源测试成功"
+                }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"测试书源失败: {str(e)}")
+        return {
+            "success": False,
+            "message": f"书源测试失败: {str(e)}"
+        }
     return {
         "success": False,
-        "message": f"书源测试暂未实现"
+        "message": "书源测试失败"
     }
 
 class DetectSourceRequest(BaseModel):
@@ -148,7 +186,7 @@ async def import_book(
             return {"message": "书籍已存在", "book_id": existing_book.id}
 
         # 后台任务导入书籍
-        background_tasks.add_task(import_book_task, request.book_url)
+        background_tasks.add_task(import_book_task, request)
 
         return {"message": "开始导入书籍，请稍后查看"}
 
@@ -158,12 +196,13 @@ async def import_book(
         print(f"导入书籍API错误: {str(e)}")
         raise HTTPException(status_code=500, detail=f"服务器内部错误: {str(e)}")
 
-async def import_book_task(book_url: str):
+async def import_book_task(ibook: ImportBookRequest):
     # 创建新的数据库会话，避免会话冲突
     from database import SessionLocal
     db = SessionLocal()
 
     try:
+        book_url = ibook.book_url
         print(f"开始导入书籍: {book_url}")
 
         # 获取对应的解析器
@@ -183,7 +222,8 @@ async def import_book_task(book_url: str):
             author=book_info.author,
             description=book_info.description,
             cover_url=book_info.cover_url,
-            source_url=book_url
+            source_url=book_url,
+            source_id=ibook.source_id
         )
         db.add(book)
         db.commit()

@@ -5,7 +5,7 @@
 """
 
 import sqlite3
-from database import engine, Base
+from database import *
 from sqlalchemy import text
 
 def migrate_database():
@@ -104,7 +104,26 @@ def recreate_table(name):
     conn.close()
 
 
+def check_book_table():
+    """检查表是否存在"""
+    Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    books = db.query(Book).all()
+    sources = {1:'biquuge',4:'mddyueshu',5:"crxs",6:"xszj"}
+    for b in books:
+        print(b.title, b.source_id, b.source_url)
+    db.commit()
+    db.close()
+
+def check_users_table():
+    db = SessionLocal()
+    users = db.query(User).all()
+    for u in users:
+        print(u.id, u.username, u.email)
+    db.commit()
+    db.close()
+
 if __name__ == "__main__":
     print("检查当前数据库结构...")
-    check_database_schema()
+    check_users_table()
     

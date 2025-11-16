@@ -415,14 +415,6 @@ function logout() {
 // 显示搜索模态框
 function showSearchModal() {
     loadBookSources().then(() => {
-        // 同时填充两个书源选择器
-        const searchSelect = document.getElementById('searchSource');
-        const urlSelect = document.getElementById('urlSource');
-
-        if (searchSelect && urlSelect) {
-            urlSelect.innerHTML = searchSelect.innerHTML;
-        }
-
         const modal = new bootstrap.Modal(document.getElementById('searchModal'));
         modal.show();
     });
@@ -434,10 +426,15 @@ async function loadBookSources() {
         const response = await fetch('/api/sources/');
         bookSources = await response.json();
 
-        const select = document.getElementById('searchSource');
-        select.innerHTML = '<option value="">选择书源</option>' +
+        const urlSelect = document.getElementById('urlSource');
+        urlSelect.innerHTML = '<option value="">选择书源</option>' +
             bookSources.map(source =>
                 `<option value="${source.id}">${source.name}</option>`
+            ).join('');
+        const searchSelect = document.getElementById('searchSource');
+        searchSelect.innerHTML = '<option value="">选择书源</option>' +
+            bookSources.filter(s => s.searchable).map(source =>
+                `<option value="${source.id}">${source.name}</option>`    
             ).join('');
 
     } catch (error) {
@@ -651,12 +648,12 @@ async function loadSourceList() {
                 <div class="d-flex justify-content-between align-items-start">
                     <div class="flex-grow-1">
                         <div class="d-flex align-items-center mb-1">
-                            <span class="source-status active"></span>
+                            <span id="sourceStatus-${source.id}" class="source-status"></span>
                             <strong>${source.name}</strong>
                         </div>
                         <div class="text-muted small">${source.url}</div>
                     </div>
-                    <div class="source-actions">
+                    <div class="hover-actions">
                         <div class="btn-group btn-group-sm">
                             <button class="btn btn-outline-primary" onclick="editSource('${source.id}')" title="编辑">
                                 <i class="bi bi-pencil"></i>
@@ -664,10 +661,8 @@ async function loadSourceList() {
                             <button class="btn btn-outline-success" onclick="testSource('${source.id}')" title="测试">
                                 <i class="bi bi-play"></i>
                             </button>
-                            <button class="btn btn-outline-warning" onclick="toggleSource('${source.id}')" title="启用/禁用">
-                                <i class="bi bi-power"></i>
-                            </button>
-                            <button class="btn btn-outline-danger" onclick="deleteSource('${source.id}')" title="删除">
+                            <button class="btn btn-outline-danger${source.can_delete ? '' : ' d-none'}"
+                                onclick="deleteSource('${source.id}')" title="删除">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </div>
@@ -682,22 +677,6 @@ async function loadSourceList() {
     }
 }
 
-// 显示添加书源表单
-function showAddSourceForm() {
-    const sourceForm = document.getElementById('sourceForm');
-    const presetSources = document.getElementById('presetSources');
-    const addSourceForm = document.getElementById('addSourceForm');
-
-    if (sourceForm) sourceForm.classList.remove('d-none');
-    if (presetSources) presetSources.classList.add('d-none');
-    if (addSourceForm) addSourceForm.reset();
-}
-
-// 隐藏添加书源表单
-function hideAddSourceForm() {
-    document.getElementById('sourceForm').classList.add('d-none');
-    document.getElementById('presetSources').classList.remove('d-none');
-}
 
 function showSourceJsonExample() {
     document.getElementById('importJson').value = `{
@@ -746,24 +725,6 @@ function showSourceJsonExample() {
     }`;
 }
 
-// 保存书源
-async function saveBookSource() {
-    const formData = {
-        name: document.getElementById('sourceName').value,
-        url: document.getElementById('sourceUrl').value,
-        search_url: document.getElementById('searchUrl').value,
-        book_url_pattern: document.getElementById('bookUrlPattern').value,
-        chapter_url_pattern: document.getElementById('chapterUrlPattern').value,
-        content_selector: document.getElementById('contentSelector').value
-    };
-
-    // 验证必填字段
-    if (!formData.name || !formData.url || !formData.search_url) {
-        showAlert('请填写必填字段', 'warning');
-        return;
-    }
-    await updateBookSource(formData);
-}
 
 async function updateBookSource(sourceData) {
     try {
@@ -777,7 +738,6 @@ async function updateBookSource(sourceData) {
 
         if (response.ok) {
             showAlert('书源添加成功', 'success');
-            hideAddSourceForm();
             loadSourceList();
         } else {
             const error = await response.json();
@@ -786,120 +746,6 @@ async function updateBookSource(sourceData) {
     } catch (error) {
         console.error('保存书源失败:', error);
         showAlert('保存失败，请检查网络连接', 'danger');
-    }
-}
-
-// 测试书源
-async function testBookSource() {
-    const searchUrl = document.getElementById('searchUrl').value;
-    const contentSelector = document.getElementById('contentSelector').value;
-
-    if (!searchUrl) {
-        showAlert('请先填写搜索URL', 'warning');
-        return;
-    }
-
-    // 移除现有的测试结果
-    const existingResult = document.querySelector('.test-result');
-    if (existingResult) {
-        existingResult.remove();
-    }
-
-    // 显示测试中状态
-    const testResult = document.createElement('div');
-    testResult.className = 'test-result';
-    testResult.innerHTML = '<i class="bi bi-hourglass-split"></i> 正在测试书源...';
-    document.getElementById('addSourceForm').appendChild(testResult);
-
-    try {
-        // 这里可以添加实际的测试逻辑
-        // 暂时模拟测试结果
-        setTimeout(() => {
-            testResult.className = 'test-result success';
-            testResult.innerHTML = `
-                <i class="bi bi-check-circle"></i> 测试成功
-                <div class="small mt-1">
-                    搜索URL格式正确<br>
-                    ${contentSelector ? '内容选择器已设置' : '建议设置内容选择器'}
-                </div>
-            `;
-        }, 2000);
-
-    } catch (error) {
-        testResult.className = 'test-result error';
-        testResult.innerHTML = `<i class="bi bi-x-circle"></i> 测试失败: ${error.message}`;
-    }
-}
-
-// 添加预设书源
-function addPresetSource(type) {
-    const presets = {
-        biquge: {
-            name: '笔趣阁',
-            url: 'https://www.biquge.com',
-            search_url: 'https://www.biquge.com/search?q={keyword}',
-            book_url_pattern: '/book/*',
-            chapter_url_pattern: '/book/*/chapter/*',
-            content_selector: '.content'
-        },
-        qidian: {
-            name: '起点中文网',
-            url: 'https://www.qidian.com',
-            search_url: 'https://www.qidian.com/search?kw={keyword}',
-            book_url_pattern: '/book/*',
-            chapter_url_pattern: '/chapter/*',
-            content_selector: '.read-content'
-        },
-        custom: {
-            name: '',
-            url: '',
-            search_url: '',
-            book_url_pattern: '',
-            chapter_url_pattern: '',
-            content_selector: ''
-        }
-    };
-
-    const preset = presets[type];
-    if (preset) {
-        // 先显示表单
-        showAddSourceForm();
-
-        // 等待DOM更新后再填充数据
-        setTimeout(() => {
-            const sourceNameEl = document.getElementById('sourceName');
-            const sourceUrlEl = document.getElementById('sourceUrl');
-            const searchUrlEl = document.getElementById('searchUrl');
-            const bookUrlPatternEl = document.getElementById('bookUrlPattern');
-            const chapterUrlPatternEl = document.getElementById('chapterUrlPattern');
-            const contentSelectorEl = document.getElementById('contentSelector');
-
-            console.log('填充预设书源:', type, preset);
-            console.log('表单元素:', {
-                sourceNameEl, sourceUrlEl, searchUrlEl,
-                bookUrlPatternEl, chapterUrlPatternEl, contentSelectorEl
-            });
-
-            if (sourceNameEl) {
-                sourceNameEl.value = preset.name;
-                console.log('设置书源名称:', preset.name);
-            } else {
-                console.error('未找到sourceName元素');
-            }
-
-            if (sourceUrlEl) sourceUrlEl.value = preset.url;
-            if (searchUrlEl) searchUrlEl.value = preset.search_url;
-            if (bookUrlPatternEl) bookUrlPatternEl.value = preset.book_url_pattern;
-            if (chapterUrlPatternEl) chapterUrlPatternEl.value = preset.chapter_url_pattern;
-            if (contentSelectorEl) contentSelectorEl.value = preset.content_selector;
-
-            // 验证填充结果
-            console.log('填充后的值:', {
-                name: sourceNameEl?.value,
-                url: sourceUrlEl?.value,
-                searchUrl: searchUrlEl?.value
-            });
-        }, 100);
     }
 }
 
@@ -921,6 +767,12 @@ function importFromJson() {
         }
 
         updateBookSource(sourceData);
+        document.getElementById('importJson').value = '';
+        // 修改保存按钮为更新
+        const saveBtn = document.querySelector('#presetSources button[onclick="importFromJson()"]');
+        if (saveBtn) {
+            saveBtn.textContent = '保存';
+        }
     } catch (error) {
         showAlert('JSON格式错误: ' + error.message, 'danger');
     }
@@ -973,30 +825,17 @@ async function editSource(sourceId) {
         const response = await fetch(`/api/sources/${sourceId}`);
         const source = await response.json();
 
-        // 先显示表单
-        showAddSourceForm();
-
         // 等待DOM更新后再填充数据
         setTimeout(() => {
-            const sourceNameEl = document.getElementById('sourceName');
-            const sourceUrlEl = document.getElementById('sourceUrl');
-            const searchUrlEl = document.getElementById('searchUrl');
-            const bookUrlPatternEl = document.getElementById('bookUrlPattern');
-            const chapterUrlPatternEl = document.getElementById('chapterUrlPattern');
-            const contentSelectorEl = document.getElementById('contentSelector');
 
-            if (sourceNameEl) sourceNameEl.value = source.name || '';
-            if (sourceUrlEl) sourceUrlEl.value = source.url || '';
-            if (searchUrlEl) searchUrlEl.value = source.search_url || '';
-            if (bookUrlPatternEl) bookUrlPatternEl.value = source.book_url_pattern || '';
-            if (chapterUrlPatternEl) chapterUrlPatternEl.value = source.chapter_url_pattern || '';
-            if (contentSelectorEl) contentSelectorEl.value = source.content_selector || '';
+            const sourceNameEl = document.getElementById('importJson');
+
+            if (sourceNameEl) sourceNameEl.value = JSON.stringify(source.sourcejson, null, 2) || '';
 
             // 修改保存按钮为更新
-            const saveBtn = document.querySelector('#addSourceForm button[onclick="saveBookSource()"]');
+            const saveBtn = document.querySelector('#presetSources button[onclick="importFromJson()"]');
             if (saveBtn) {
                 saveBtn.textContent = '更新';
-                saveBtn.setAttribute('onclick', `updateBookSource('${sourceId}')`);
             }
         }, 100);
 
@@ -1006,50 +845,10 @@ async function editSource(sourceId) {
     }
 }
 
-// 更新书源
-// async function updateBookSource(sourceId) {
-//     const formData = {
-//         name: document.getElementById('sourceName').value,
-//         url: document.getElementById('sourceUrl').value,
-//         search_url: document.getElementById('searchUrl').value,
-//         book_url_pattern: document.getElementById('bookUrlPattern').value,
-//         chapter_url_pattern: document.getElementById('chapterUrlPattern').value,
-//         content_selector: document.getElementById('contentSelector').value
-//     };
-
-//     try {
-//         const response = await fetch(`/api/sources/${sourceId}`, {
-//             method: 'PUT',
-//             headers: {
-//                 'Content-Type': 'application/json'
-//             },
-//             body: JSON.stringify(formData)
-//         });
-
-//         if (response.ok) {
-//             showAlert('书源更新成功', 'success');
-//             hideAddSourceForm();
-//             loadSourceList();
-
-//             // 恢复保存按钮
-//             const saveBtn = document.querySelector('#addSourceForm button[onclick^="updateBookSource"]');
-//             if (saveBtn) {
-//                 saveBtn.textContent = '保存';
-//                 saveBtn.setAttribute('onclick', 'saveBookSource()');
-//             }
-//         } else {
-//             const error = await response.json();
-//             showAlert(error.detail || '更新失败', 'danger');
-//         }
-//     } catch (error) {
-//         console.error('更新书源失败:', error);
-//         showAlert('更新失败，请检查网络连接', 'danger');
-//     }
-// }
-
 // 测试指定书源
 async function testSource(sourceId) {
     showAlert('正在测试书源...', 'info');
+    document.getElementById('sourceStatus-' + sourceId).classList.remove(['active', 'inactive']);
 
     try {
         const response = await fetch(`/api/sources/${sourceId}/test`, {
@@ -1058,8 +857,11 @@ async function testSource(sourceId) {
 
         if (response.ok) {
             const result = await response.json();
+            console.log('测试结果:', result);
+            document.getElementById('sourceStatus-' + sourceId).classList.add('active');
             showAlert('书源测试成功', 'success');
         } else {
+            document.getElementById('sourceStatus-' + sourceId).classList.add('inactive');
             showAlert('书源测试失败', 'danger');
         }
     } catch (error) {
@@ -1068,29 +870,8 @@ async function testSource(sourceId) {
     }
 }
 
-// 切换书源状态
-async function toggleSource(sourceId) {
-    try {
-        const response = await fetch(`/api/sources/${sourceId}/toggle`, {
-            method: 'POST'
-        });
-
-        if (response.ok) {
-            showAlert('书源状态更新成功', 'success');
-            loadSourceList();
-        } else {
-            showAlert('操作失败', 'danger');
-        }
-    } catch (error) {
-        console.error('切换书源状态失败:', error);
-        showAlert('操作失败，请检查网络连接', 'danger');
-    }
-}
-
 // 删除书源
 async function deleteSource(sourceId) {
-    showAlert('删除暂未实现', 'danger');
-    return;
     if (!confirm('确定要删除这个书源吗？')) {
         return;
     }
@@ -1111,85 +892,6 @@ async function deleteSource(sourceId) {
         showAlert('删除失败，请检查网络连接', 'danger');
     }
 }
-
-// 导出书源配置
-function exportSource(sourceId) {
-    // 这个功能可以后续添加
-    showAlert('导出功能待实现', 'info');
-}
-// 调试函数 - 可以在浏览器控制台中调用
-window.debugBookSource = {
-    // 测试表单元素是否存在
-    checkElements: function() {
-        const elements = {
-            sourceName: document.getElementById('sourceName'),
-            sourceUrl: document.getElementById('sourceUrl'),
-            searchUrl: document.getElementById('searchUrl'),
-            bookUrlPattern: document.getElementById('bookUrlPattern'),
-            chapterUrlPattern: document.getElementById('chapterUrlPattern'),
-            contentSelector: document.getElementById('contentSelector'),
-            sourceForm: document.getElementById('sourceForm'),
-            presetSources: document.getElementById('presetSources')
-        };
-
-        console.log('表单元素检查:', elements);
-
-        Object.keys(elements).forEach(key => {
-            if (!elements[key]) {
-                console.error(`未找到元素: ${key}`);
-            } else {
-                console.log(`✓ 找到元素: ${key}`);
-            }
-        });
-
-        return elements;
-    },
-
-    // 测试填充表单
-    testFill: function() {
-        const testData = {
-            name: '测试书源',
-            url: 'https://test.com',
-            search_url: 'https://test.com/search?q={keyword}',
-            book_url_pattern: '/book/*',
-            chapter_url_pattern: '/chapter/*',
-            content_selector: '.content'
-        };
-
-        console.log('测试数据:', testData);
-
-        const elements = this.checkElements();
-
-        if (elements.sourceName) elements.sourceName.value = testData.name;
-        if (elements.sourceUrl) elements.sourceUrl.value = testData.url;
-        if (elements.searchUrl) elements.searchUrl.value = testData.search_url;
-        if (elements.bookUrlPattern) elements.bookUrlPattern.value = testData.book_url_pattern;
-        if (elements.chapterUrlPattern) elements.chapterUrlPattern.value = testData.chapter_url_pattern;
-        if (elements.contentSelector) elements.contentSelector.value = testData.content_selector;
-
-        console.log('填充完成，当前值:', {
-            name: elements.sourceName?.value,
-            url: elements.sourceUrl?.value,
-            searchUrl: elements.searchUrl?.value
-        });
-    },
-
-    // 显示表单
-    showForm: function() {
-        showAddSourceForm();
-        setTimeout(() => {
-            this.checkElements();
-        }, 200);
-    },
-
-    // 测试预设书源
-    testPreset: function(type = 'biquge') {
-        console.log('测试预设书源:', type);
-        addPresetSource(type);
-    }
-};
-
-console.log('调试工具已加载，使用 debugBookSource.checkElements() 检查表单元素');// URL导入相关函数
 
 // 从URL导入单本书籍
 async function importFromUrl() {
@@ -1299,21 +1001,19 @@ async function detectBookSource(url) {
 
         if (response.ok) {
             const result = await response.json();
-            if (result.source_id) {
-                const matchType = result.match_type === 'exact' ? '精确匹配' : '模糊匹配';
-                console.log(`${matchType}到书源:`, result.source_name);
-                showAlert(`${matchType}到书源: ${result.source_name}`, 'info');
+            if (result.id) {
+                console.log(`匹配到书源:`, result.id, result.name);
 
                 // 自动选择检测到的书源
                 const urlSelect = document.getElementById('urlSource');
                 if (urlSelect) {
-                    urlSelect.value = result.source_id;
+                    urlSelect.value = result.id;
                 }
 
-                return result.source_id;
+                return result.name;
             } else {
                 console.log('未找到匹配的书源');
-                return result.source_name;
+                return result.name;
             }
         } else {
             console.error('书源检测API调用失败');
@@ -1471,39 +1171,6 @@ async function batchImportFromUrls() {
     }
 }
 
-// 从剪贴板粘贴URL
-async function pasteFromClipboard() {
-    try {
-        const text = await navigator.clipboard.readText();
-        if (text && text.startsWith('http')) {
-            document.getElementById('bookUrl').value = text;
-            showAlert('已从剪贴板粘贴URL', 'success');
-        } else {
-            showAlert('剪贴板中没有有效的URL', 'warning');
-        }
-    } catch (error) {
-        showAlert('无法访问剪贴板，请手动粘贴', 'warning');
-    }
-}
-
-// 预览书籍信息（可选功能）
-async function previewBookInfo() {
-    const bookUrl = document.getElementById('bookUrl').value.trim();
-    const sourceId = document.getElementById('urlSource').value;
-
-    if (!bookUrl || !sourceId) {
-        showAlert('请输入URL并选择书源', 'warning');
-        return;
-    }
-
-    try {
-        // 这里可以添加预览功能的API调用
-        showAlert('预览功能待实现', 'info');
-    } catch (error) {
-        showAlert('预览失败', 'danger');
-    }
-}// URL输入辅助函数
-
 // 处理URL粘贴事件
 function handleUrlPaste(event) {
     setTimeout(() => {
@@ -1514,14 +1181,16 @@ function handleUrlPaste(event) {
         if (autoDetect && autoDetect.checked) {
             const url = event.target.value.trim();
             if (url) {
-                detectBookSource(url);
+                detectBookSource(url).then(srcname => {
+                    validateBookUrl(srcname);
+                });
             }
         }
     }, 100);
 }
 
 // 验证书籍URL
-function validateBookUrl() {
+function validateBookUrl(isValidSite=false) {
     const urlInput = document.getElementById('bookUrl');
     const validation = document.getElementById('urlValidation');
     const url = urlInput.value.trim();
@@ -1536,16 +1205,8 @@ function validateBookUrl() {
         const urlObj = new URL(url);
         const hostname = urlObj.hostname;
 
-        // 检查是否是常见的小说网站
-        const commonSites = [
-            'qidian.com', 'zongheng.com', 'jjwxc.net', 'biquge.com',
-            'hongxiu.com', 'xxsy.net', 'readnovel.com', 'shuhai.com'
-        ];
-
-        const isKnownSite = commonSites.some(site => hostname.includes(site));
-
-        if (isKnownSite) {
-            validation.innerHTML = `<i class="bi bi-check-circle text-success"></i> 识别为小说网站: ${hostname}`;
+        if (isValidSite) {
+            validation.innerHTML = `<i class="bi bi-check-circle text-success"></i> 识别为小说网站: ${typeof isValidSite === 'string' ? isValidSite : hostname}`;
             urlInput.classList.remove('is-invalid');
             urlInput.classList.add('is-valid');
         } else {
@@ -1577,24 +1238,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// 快速填充示例URL（用于测试）
-function fillExampleUrl(type) {
-    const examples = {
-        qidian: 'https://book.qidian.com/info/1004608738',
-        zongheng: 'http://book.zongheng.com/book/878590.html',
-        biquge: 'https://www.biquge.com/book/12345/',
-        jjwxc: 'http://www.jjwxc.net/onebook.php?novelid=123456'
-    };
-
-    const url = examples[type];
-    if (url) {
-        document.getElementById('bookUrl').value = url;
-        validateBookUrl();
-        if (document.getElementById('autoDetectSource').checked) {
-            detectBookSource(url);
-        }
-    }
-}
 
 // 添加快捷键支持
 document.addEventListener('keydown', function(event) {
@@ -1607,7 +1250,9 @@ document.addEventListener('keydown', function(event) {
                 if (document.getElementById('autoDetectSource').checked) {
                     const url = activeElement.value.trim();
                     if (url) {
-                        detectBookSource(url);
+                        detectBookSource(url).then(srcname => {
+                            validateBookUrl(srcname);
+                        });
                     }
                 }
             }, 100);

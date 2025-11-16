@@ -47,12 +47,21 @@
         });
     });
 
+    window.addEventListener('scroll', function () {
+        if (window.innerHeight + window.scrollY >= document.body.offsetHeight) {
+            loadMoreBooks();
+        }
+    });
+
+    let booksLoadedFinished = false;
+
     async function loadBooks() {
         const loading = document.getElementById('loading');
         const bookshelf = document.getElementById('bookshelf');
         const emptyShelf = document.getElementById('emptyShelf');
 
         loading.classList.remove('d-none');
+        booksLoadedFinished = false;
 
         try {
             const response = await fetch('/api/books/');
@@ -65,7 +74,36 @@
                 return;
             }
 
-            bookshelf.innerHTML = books.map(book => `
+            bookshelf.innerHTML = createBooksHtml(books);
+        } catch (error) {
+            loading.classList.add('d-none');
+            console.error('加载书籍失败:', error);
+            showAlert('加载书籍失败', 'danger');
+        }
+    }
+
+    async function loadMoreBooks() {
+        if (booksLoadedFinished) {
+            return;
+        }
+
+        try {
+            const bookshelf = document.getElementById('bookshelf');
+            const response = await fetch(`/api/books/?skip=${bookshelf.childElementCount}`);
+            const books = await response.json();
+            if (books.length > 0) {
+                bookshelf.innerHTML += createBooksHtml(books);
+            } else {
+                booksLoadedFinished = true;
+            }
+        } catch (error) {
+            console.error('加载书籍失败:', error);
+            showAlert('加载书籍失败', 'danger');
+        }
+    }
+
+    function createBooksHtml(books) {
+        return books.map(book => `
             <div class="col-md-3 col-sm-6 mb-4">
                 <div class="card book-card h-100">
                     <img src="${book.cover_url || '/static/images/default-cover.jpg'}" 
@@ -93,12 +131,6 @@
                 </div>
             </div>
         `).join('');
-
-        } catch (error) {
-            loading.classList.add('d-none');
-            console.error('加载书籍失败:', error);
-            showAlert('加载书籍失败', 'danger');
-        }
     }
 
     async function updateBookChapters(bookId) {

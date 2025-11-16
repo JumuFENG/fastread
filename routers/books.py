@@ -4,9 +4,6 @@ from typing import List, Optional
 from database import get_db, Book, Chapter
 from pydantic import BaseModel
 from datetime import datetime
-import httpx
-from bs4 import BeautifulSoup
-import re
 from parsers.parser_loader import get_parser_for_source, get_parser_for_url
 
 router = APIRouter()
@@ -44,9 +41,10 @@ class BookCreate(BaseModel):
     source_url: str
 
 def get_parser_for_book(book: Book):
-    if book.source_id and isinstance(book.source_id, str):
-        return get_parser_for_source(book.source_id)
-    return get_parser_for_url(book.source_url, {})
+    source_id = getattr(book, 'source_id', None)
+    if source_id and isinstance(source_id, str):
+        return get_parser_for_source(source_id)
+    return get_parser_for_url(book.source_url)
 
 @router.get("/", response_model=List[BookResponse])
 async def get_books(

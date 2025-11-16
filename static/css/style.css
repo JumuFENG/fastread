@@ -427,6 +427,7 @@ body {
     height: 8px;
     border-radius: 50%;
     margin-right: 8px;
+    background-color: lightgray;
 }
 
 .source-status.active {
@@ -452,19 +453,6 @@ body {
 
 .template-item:hover .hover-actions {
     opacity: 1;
-}
-
-/* 表单样式 */
-#sourceForm {
-    background: #f8f9fa;
-    padding: 1.5rem;
-    border-radius: 8px;
-    border: 1px solid #e9ecef;
-}
-
-#sourceForm h6 {
-    color: #495057;
-    margin-bottom: 1rem;
 }
 
 /* 预设书源按钮 */

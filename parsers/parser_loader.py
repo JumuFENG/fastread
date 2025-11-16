@@ -113,6 +113,38 @@ class ParserLoader:
         self._parsers.append(parser)
         print(f"加载解析器: {parser.get_parser_name()} -> {BaseBookSourceParser.__name__}")
         return parser
+    
+    def delete_base_parser(self, source_id: str) -> None:
+        """
+        删除基础解析器
+
+        Args:
+            source_id: 书源
+
+        Returns:
+            None
+        """
+        for parser in self._parsers:
+            if source_id not in parser.get_parser_name():
+                continue
+            self._parsers.remove(parser)
+            current_dir = os.path.dirname(os.path.dirname(__file__))
+            sources_dir = os.path.join(current_dir, 'sources')
+            if not os.path.isdir(sources_dir):
+                return
+            jpath = os.path.join(sources_dir, 'sources.json')
+            if not os.path.isfile(jpath):
+                return
+            with open(jpath, 'r', encoding='utf-8') as f:
+                sources = json.load(f)
+            for source in sources:
+                if source['name'] == source_id or source['show_name'] == source_id:
+                    sources.remove(source)
+                    break
+            with open(jpath, 'w', encoding='utf-8') as f:
+                json.dump(sources, f, ensure_ascii=False, indent=4)
+            print(f"删除解析器: {parser.get_parser_name()} -> {BaseBookSourceParser.__name__}")
+            break
 
     def get_parser_for_url(self, url: str) -> BaseBookSourceParser:
         """
@@ -182,3 +214,6 @@ def get_parser_for_url(url: str, source_config: dict={}) -> BaseBookSourceParser
     if not p:
         p = parser_loader.create_base_parser(source_config)
     return p
+
+def delete_parser(source_id: str):
+    parser_loader.delete_base_parser(source_id)
