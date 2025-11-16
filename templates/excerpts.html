@@ -1,0 +1,454 @@
+{% extends "base.html" %}
+
+{% block title %}我的摘录 - FastRead{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="bi bi-bookmark"></i> 我的摘录</h2>
+            <div class="btn-group">
+                <button class="btn btn-outline-primary" onclick="refreshExcerpts()">
+                    <i class="bi bi-arrow-clockwise"></i> 刷新
+                </button>
+                <button class="btn btn-outline-success" onclick="exportExcerpts()">
+                    <i class="bi bi-download"></i> 导出
+                </button>
+                <button class="btn btn-outline-danger" onclick="clearAllExcerpts()">
+                    <i class="bi bi-trash"></i> 清空
+                </button>
+            </div>
+        </div>
+
+        <!-- 筛选和搜索 -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <label class="form-label">按书籍筛选</label>
+                        <select class="form-select" id="bookFilter" onchange="filterExcerpts()">
+                            <option value="">全部书籍</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">搜索摘录内容</label>
+                        <input type="text" class="form-control" id="excerptSearch" placeholder="输入关键词搜索"
+                            onkeyup="searchExcerpts()">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">排序方式</label>
+                        <select class="form-select" id="sortOrder" onchange="sortExcerpts()">
+                            <option value="newest">最新优先</option>
+                            <option value="oldest">最早优先</option>
+                            <option value="book">按书籍分组</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 摘录列表 -->
+        <div id="excerptsContainer">
+            <div class="text-center py-5">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">加载中...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 空状态 -->
+        <div id="emptyState" class="text-center py-5 d-none">
+            <i class="bi bi-bookmark display-1 text-muted"></i>
+            <p class="mt-3 text-muted">暂无摘录</p>
+            <p class="small text-muted">在阅读时选择文本并保存摘录，这里会显示您的所有摘录</p>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑摘录模态框 -->
+<div class="modal fade" id="editExcerptModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">编辑摘录</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">摘录内容</label>
+                    <textarea class="form-control" id="editExcerptContent" rows="4" readonly></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">笔记</label>
+                    <textarea class="form-control" id="editExcerptNote" rows="3" placeholder="添加您的笔记或想法"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveExcerptNote()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let allExcerpts = [];
+    let filteredExcerpts = [];
+    let currentEditExcerptId = null;
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            showAlert('请先登录', 'warning');
+            window.location.href = '/auth';
+            return;
+        }
+
+        loadExcerpts();
+    });
+
+    // 加载摘录
+    async function loadExcerpts() {
+        const token = localStorage.getItem('token');
+        const container = document.getElementById('excerptsContainer');
+        const emptyState = document.getElementById('emptyState');
+
+        try {
+            const response = await fetch('/api/excerpts/', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('获取摘录失败');
+            }
+
+            allExcerpts = await response.json();
+            filteredExcerpts = [...allExcerpts];
+
+            if (allExcerpts.length === 0) {
+                container.classList.add('d-none');
+                emptyState.classList.remove('d-none');
+                return;
+            }
+
+            // 加载书籍列表到筛选器
+            loadBookFilter();
+
+            // 显示摘录
+            displayExcerpts(filteredExcerpts);
+
+        } catch (error) {
+            console.error('加载摘录失败:', error);
+            container.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle"></i> 加载摘录失败: ${error.message}
+            </div>
+        `;
+        }
+    }
+
+    // 加载书籍筛选器
+    function loadBookFilter() {
+        const bookFilter = document.getElementById('bookFilter');
+        const books = new Map();
+
+        allExcerpts.forEach(excerpt => {
+            if (excerpt.book_id && excerpt.book_title) {
+                books.set(excerpt.book_id, excerpt.book_title);
+            }
+        });
+
+        bookFilter.innerHTML = '<option value="">全部书籍</option>' +
+            Array.from(books.entries()).map(([id, title]) =>
+                `<option value="${id}">${title}</option>`
+            ).join('');
+    }
+
+    // 显示摘录
+    function displayExcerpts(excerpts) {
+        const container = document.getElementById('excerptsContainer');
+        const emptyState = document.getElementById('emptyState');
+
+        if (excerpts.length === 0) {
+            container.classList.add('d-none');
+            emptyState.classList.remove('d-none');
+            return;
+        }
+
+        container.classList.remove('d-none');
+        emptyState.classList.add('d-none');
+
+        container.innerHTML = excerpts.map(excerpt => `
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="flex-grow-1">
+                        <h6 class="text-primary mb-1">
+                            <i class="bi bi-book"></i> ${excerpt.book_title || '未知书籍'}
+                        </h6>
+                        <small class="text-muted">
+                            <i class="bi bi-file-text"></i> ${excerpt.chapter_title || '章节未知'}
+                        </small>
+                    </div>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary" onclick="editExcerpt(${excerpt.id})" title="编辑">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="deleteExcerpt(${excerpt.id})" title="删除">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="excerpt-content p-3 bg-light rounded mb-2">
+                    ${excerpt.content}
+                </div>
+                ${excerpt.note ? `
+                    <div class="excerpt-note p-2 border-start border-primary border-3 bg-white">
+                        <small class="text-muted"><i class="bi bi-chat-left-quote"></i> 笔记：</small>
+                        <div>${excerpt.note}</div>
+                    </div>
+                ` : ''}
+                <div class="text-muted small mt-2">
+                    <i class="bi bi-clock"></i> ${formatDate(excerpt.created_at)}
+                </div>
+            </div>
+        </div>
+    `).join('');
+    }
+
+    // 筛选摘录
+    function filterExcerpts() {
+        const bookId = document.getElementById('bookFilter').value;
+        const searchText = document.getElementById('excerptSearch').value.toLowerCase();
+
+        filteredExcerpts = allExcerpts.filter(excerpt => {
+            const matchBook = !bookId || excerpt.book_id == bookId;
+            const matchSearch = !searchText ||
+                excerpt.content.toLowerCase().includes(searchText) ||
+                (excerpt.note && excerpt.note.toLowerCase().includes(searchText));
+            return matchBook && matchSearch;
+        });
+
+        sortExcerpts();
+    }
+
+    // 搜索摘录
+    function searchExcerpts() {
+        filterExcerpts();
+    }
+
+    // 排序摘录
+    function sortExcerpts() {
+        const sortOrder = document.getElementById('sortOrder').value;
+
+        switch (sortOrder) {
+            case 'newest':
+                filteredExcerpts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                break;
+            case 'oldest':
+                filteredExcerpts.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+                break;
+            case 'book':
+                filteredExcerpts.sort((a, b) => {
+                    if (a.book_title !== b.book_title) {
+                        return (a.book_title || '').localeCompare(b.book_title || '');
+                    }
+                    return new Date(b.created_at) - new Date(a.created_at);
+                });
+                break;
+        }
+
+        displayExcerpts(filteredExcerpts);
+    }
+
+    // 编辑摘录
+    function editExcerpt(excerptId) {
+        const excerpt = allExcerpts.find(e => e.id === excerptId);
+        if (!excerpt) return;
+
+        currentEditExcerptId = excerptId;
+        document.getElementById('editExcerptContent').value = excerpt.content;
+        document.getElementById('editExcerptNote').value = excerpt.note || '';
+
+        const modal = new bootstrap.Modal(document.getElementById('editExcerptModal'));
+        modal.show();
+    }
+
+    // 保存摘录笔记
+    async function saveExcerptNote() {
+        const token = localStorage.getItem('token');
+        const note = document.getElementById('editExcerptNote').value;
+
+        try {
+            const response = await fetch(`/api/excerpts/${currentEditExcerptId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ note: note })
+            });
+
+            if (!response.ok) {
+                throw new Error('保存失败');
+            }
+
+            showAlert('笔记保存成功', 'success');
+
+            // 关闭模态框
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editExcerptModal'));
+            modal.hide();
+
+            // 重新加载
+            loadExcerpts();
+
+        } catch (error) {
+            console.error('保存笔记失败:', error);
+            showAlert('保存失败: ' + error.message, 'danger');
+        }
+    }
+
+    // 删除摘录
+    async function deleteExcerpt(excerptId) {
+        if (!confirm('确定要删除这条摘录吗？')) {
+            return;
+        }
+
+        const token = localStorage.getItem('token');
+
+        try {
+            const response = await fetch(`/api/excerpts/${excerptId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('删除失败');
+            }
+
+            showAlert('摘录删除成功', 'success');
+            loadExcerpts();
+
+        } catch (error) {
+            console.error('删除摘录失败:', error);
+            showAlert('删除失败: ' + error.message, 'danger');
+        }
+    }
+
+    // 刷新摘录
+    function refreshExcerpts() {
+        loadExcerpts();
+        showAlert('摘录列表已刷新', 'success');
+    }
+
+    // 导出摘录
+    function exportExcerpts() {
+        if (allExcerpts.length === 0) {
+            showAlert('没有可导出的摘录', 'warning');
+            return;
+        }
+
+        // 生成Markdown格式
+        let markdown = '# 我的摘录\n\n';
+        markdown += `导出时间: ${new Date().toLocaleString('zh-CN')}\n\n`;
+        markdown += `总计: ${allExcerpts.length} 条摘录\n\n`;
+        markdown += '---\n\n';
+
+        // 按书籍分组
+        const byBook = {};
+        allExcerpts.forEach(excerpt => {
+            const bookTitle = excerpt.book_title || '未知书籍';
+            if (!byBook[bookTitle]) {
+                byBook[bookTitle] = [];
+            }
+            byBook[bookTitle].push(excerpt);
+        });
+
+        Object.entries(byBook).forEach(([bookTitle, excerpts]) => {
+            markdown += `## ${bookTitle}\n\n`;
+            excerpts.forEach(excerpt => {
+                markdown += `### ${excerpt.chapter_title || '章节未知'}\n\n`;
+                markdown += `> ${excerpt.content}\n\n`;
+                if (excerpt.note) {
+                    markdown += `**笔记:** ${excerpt.note}\n\n`;
+                }
+                markdown += `*摘录时间: ${formatDate(excerpt.created_at)}*\n\n`;
+                markdown += '---\n\n';
+            });
+        });
+
+        // 创建下载
+        const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+
+        link.setAttribute('href', url);
+        link.setAttribute('download', `excerpts_${new Date().toISOString().split('T')[0]}.md`);
+        link.style.visibility = 'hidden';
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        showAlert('摘录导出成功', 'success');
+    }
+
+    // 清空所有摘录
+    async function clearAllExcerpts() {
+        if (!confirm('确定要删除所有摘录吗？此操作不可恢复！')) {
+            return;
+        }
+
+        const token = localStorage.getItem('token');
+
+        try {
+            // 逐个删除
+            for (const excerpt of allExcerpts) {
+                await fetch(`/api/excerpts/${excerpt.id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+            }
+
+            showAlert('所有摘录已清空', 'success');
+            loadExcerpts();
+
+        } catch (error) {
+            console.error('清空摘录失败:', error);
+            showAlert('清空失败: ' + error.message, 'danger');
+        }
+    }
+
+    // 格式化日期
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+</script>
+
+<style>
+    .excerpt-content {
+        line-height: 1.8;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+
+    .excerpt-note {
+        line-height: 1.6;
+    }
+</style>
+{% endblock %}

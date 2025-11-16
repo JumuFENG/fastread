@@ -45,11 +45,21 @@
                                 <span id="username"></span>
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="#" onclick="showReadingHistory()">阅读历史</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="showReadingHistory()">
+                                    <i class="bi bi-clock-history"></i> 阅读历史
+                                </a></li>
+                                <li><a class="dropdown-item" href="/excerpts">
+                                    <i class="bi bi-bookmark"></i> 我的摘录
+                                </a></li>
+                                <li><a class="dropdown-item" href="/my-templates">
+                                    <i class="bi bi-file-text"></i> 我的模板
+                                </a></li>
                                 <li>
                                     <hr class="dropdown-divider">
                                 </li>
-                                <li><a class="dropdown-item" href="#" onclick="logout()">退出登录</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="logout()">
+                                    <i class="bi bi-box-arrow-right"></i> 退出登录
+                                </a></li>
                             </ul>
                         </div>
                     </li>
@@ -144,8 +154,8 @@
                     <!-- 搜索方式选择 -->
                     <ul class="nav nav-tabs mb-3" id="searchTabs" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="url-tab" data-bs-toggle="tab" data-bs-target="#url-import"
-                                type="button" role="tab">
+                            <button class="nav-link active" id="url-tab" data-bs-toggle="tab"
+                                data-bs-target="#url-import" type="button" role="tab">
                                 URL导入
                             </button>
                         </li>
@@ -162,8 +172,7 @@
                         <div class="tab-pane fade" id="keyword-search" role="tabpanel">
                             <div class="row mb-3">
                                 <div class="col-md-7">
-                                    <input type="text" class="form-control" id="searchKeyword"
-                                        placeholder="输入书名或作者">
+                                    <input type="text" class="form-control" id="searchKeyword" placeholder="输入书名或作者">
                                 </div>
                                 <div class="col-md-3">
                                     <select class="form-select" id="searchSource">
@@ -276,7 +285,8 @@
                                     <h6>导入书源</h6>
                                     <div>
                                         <label class="form-label">从JSON导入</label>
-                                        <button class="btn btn-outline-primary btn-sm" onclick="showSourceJsonExample()">
+                                        <button class="btn btn-outline-primary btn-sm"
+                                            onclick="showSourceJsonExample()">
                                             模板示例
                                         </button>
                                         <textarea class="form-control" id="importJson" rows="4" autocomplete="off"
@@ -294,6 +304,32 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 阅读历史模态框 -->
+    <div class="modal fade" id="readingHistoryModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-clock-history"></i> 阅读历史
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="readingHistoryContent">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">加载中...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
                 </div>
             </div>
         </div>

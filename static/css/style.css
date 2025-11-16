@@ -1308,3 +1308,25 @@ body.offline::before {
     border-top: 1px solid #dee2e6;
     background-color: #f8f9fa;
 }
+/* 阅读历史
+样式 */
+#readingHistoryModal .list-group-item {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#readingHistoryModal .list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+#readingHistoryModal .img-fluid {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#readingHistoryModal .progress {
+    background-color: #e9ecef;
+}
+
+#readingHistoryModal .progress-bar {
+    background-color: #0d6efd;
+}

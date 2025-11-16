@@ -17,6 +17,42 @@
             </div>
         </div>
 
+        <!-- 统计卡片 -->
+        <div class="row mb-4" id="statsCards">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h3 class="mb-0" id="totalUsers">-</h3>
+                        <p class="text-muted mb-0">总用户数</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h3 class="mb-0 text-success" id="activeUsers">-</h3>
+                        <p class="text-muted mb-0">活跃用户</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h3 class="mb-0 text-secondary" id="inactiveUsers">-</h3>
+                        <p class="text-muted mb-0">禁用用户</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h3 class="mb-0 text-info" id="recentUsers">-</h3>
+                        <p class="text-muted mb-0">近7天新增</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="card">
             <div class="card-header">
                 <div class="row align-items-center">
@@ -25,8 +61,7 @@
                     </div>
                     <div class="col-md-6">
                         <div class="input-group">
-                            <input type="text" class="form-control" id="userSearch" 
-                                   placeholder="搜索用户名或邮箱">
+                            <input type="text" class="form-control" id="userSearch" placeholder="搜索用户名或邮箱">
                             <button class="btn btn-outline-secondary" onclick="searchUsers()">
                                 <i class="bi bi-search"></i>
                             </button>
@@ -38,13 +73,13 @@
                 <div id="usersTable">
                     <!-- 用户列表将通过JavaScript加载 -->
                 </div>
-                
+
                 <div id="loading" class="text-center d-none">
                     <div class="spinner-border" role="status">
                         <span class="visually-hidden">加载中...</span>
                     </div>
                 </div>
-                
+
                 <div id="noUsers" class="text-center text-muted d-none">
                     <i class="bi bi-people display-4"></i>
                     <p class="mt-3">暂无注册用户</p>
@@ -75,47 +110,94 @@
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // 检查是否有管理员权限（简单实现）
-    const token = localStorage.getItem('token');
-    if (!token) {
-        showAlert('请先登录', 'warning');
-        window.location.href = '/auth';
-        return;
-    }
-    
-    loadUsers();
-    
-    // 搜索框回车事件
-    document.getElementById('userSearch').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            searchUsers();
-        }
-    });
-});
-
-// 加载用户列表
-async function loadUsers() {
-    const loading = document.getElementById('loading');
-    const usersTable = document.getElementById('usersTable');
-    const noUsers = document.getElementById('noUsers');
-    
-    loading.classList.remove('d-none');
-    usersTable.innerHTML = '';
-    noUsers.classList.add('d-none');
-    
-    try {
-        // 注意：这里需要一个管理员API，目前使用模拟数据
-        const users = await getMockUsers();
-        
-        loading.classList.add('d-none');
-        
-        if (users.length === 0) {
-            noUsers.classList.remove('d-none');
+    document.addEventListener('DOMContentLoaded', function () {
+        // 检查是否有管理员权限（简单实现）
+        const token = localStorage.getItem('token');
+        if (!token) {
+            showAlert('请先登录', 'warning');
+            window.location.href = '/auth';
             return;
         }
-        
-        usersTable.innerHTML = `
+
+        loadStats();
+        loadUsers();
+
+        // 搜索框回车事件
+        document.getElementById('userSearch').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                searchUsers();
+            }
+        });
+    });
+
+    // 加载统计信息
+    async function loadStats() {
+        const token = localStorage.getItem('token');
+
+        try {
+            const response = await fetch('/api/users/stats/summary', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const stats = await response.json();
+                document.getElementById('totalUsers').textContent = stats.total_users;
+                document.getElementById('activeUsers').textContent = stats.active_users;
+                document.getElementById('inactiveUsers').textContent = stats.inactive_users;
+                document.getElementById('recentUsers').textContent = stats.recent_users;
+            }
+        } catch (error) {
+            console.error('加载统计信息失败:', error);
+        }
+    }
+
+    // 加载用户列表
+    async function loadUsers(searchKeyword = '') {
+        const loading = document.getElementById('loading');
+        const usersTable = document.getElementById('usersTable');
+        const noUsers = document.getElementById('noUsers');
+        const token = localStorage.getItem('token');
+
+        loading.classList.remove('d-none');
+        usersTable.innerHTML = '';
+        noUsers.classList.add('d-none');
+
+        try {
+            let url = '/api/users/';
+            if (searchKeyword) {
+                url += `?search=${encodeURIComponent(searchKeyword)}`;
+            }
+
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.status === 403) {
+                showAlert('需要管理员权限', 'danger');
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error('获取用户列表失败');
+            }
+
+            const users = await response.json();
+
+            loading.classList.add('d-none');
+
+            if (users.length === 0) {
+                noUsers.classList.remove('d-none');
+                return;
+            }
+
+            usersTable.innerHTML = `
             <div class="table-responsive">
                 <table class="table table-hover">
                     <thead class="table-light">
@@ -152,8 +234,11 @@ async function loadUsers() {
                                         <button class="btn btn-outline-info" onclick="showUserDetail(${user.id})" title="查看详情">
                                             <i class="bi bi-eye"></i>
                                         </button>
-                                        <button class="btn btn-outline-warning" onclick="toggleUserStatus(${user.id})" title="切换状态">
+                                        <button class="btn btn-outline-warning" onclick="toggleUserStatus(${user.id}, ${user.is_active})" title="切换状态">
                                             <i class="bi bi-power"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger" onclick="deleteUser(${user.id}, '${user.username}')" title="删除用户">
+                                            <i class="bi bi-trash"></i>
                                         </button>
                                     </div>
                                 </td>
@@ -163,83 +248,63 @@ async function loadUsers() {
                 </table>
             </div>
         `;
-        
-    } catch (error) {
-        loading.classList.add('d-none');
-        console.error('加载用户列表失败:', error);
-        showAlert('加载用户列表失败', 'danger');
-    }
-}
 
-// 获取模拟用户数据（实际应用中应该调用API）
-async function getMockUsers() {
-    // 模拟API延迟
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    return [
-        {
-            id: 1,
-            username: 'admin',
-            email: 'admin@example.com',
-            is_active: true,
-            created_at: '2024-01-01T00:00:00Z'
-        },
-        {
-            id: 2,
-            username: 'testuser',
-            email: 'test@example.com',
-            is_active: true,
-            created_at: '2024-01-02T00:00:00Z'
+        } catch (error) {
+            loading.classList.add('d-none');
+            console.error('加载用户列表失败:', error);
+            showAlert('加载用户列表失败: ' + error.message, 'danger');
         }
-    ];
-}
-
-// 搜索用户
-async function searchUsers() {
-    const keyword = document.getElementById('userSearch').value.trim();
-    
-    if (!keyword) {
-        loadUsers();
-        return;
     }
-    
-    // 这里应该调用搜索API
-    showAlert('搜索功能待实现', 'info');
-}
 
-// 刷新用户列表
-function refreshUsers() {
-    loadUsers();
-    showAlert('用户列表已刷新', 'success');
-}
+    // 搜索用户
+    async function searchUsers() {
+        const keyword = document.getElementById('userSearch').value.trim();
+        loadUsers(keyword);
+    }
 
-// 显示用户详情
-async function showUserDetail(userId) {
-    const modal = new bootstrap.Modal(document.getElementById('userDetailModal'));
-    const content = document.getElementById('userDetailContent');
-    
-    content.innerHTML = '<div class="text-center"><div class="spinner-border"></div></div>';
-    modal.show();
-    
-    try {
-        // 模拟获取用户详情
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        const user = {
-            id: userId,
-            username: 'testuser',
-            email: 'test@example.com',
-            is_active: true,
-            created_at: '2024-01-02T00:00:00Z',
-            last_login: '2024-01-10T12:00:00Z',
-            books_count: 5,
-            reading_progress: [
-                { book_title: '测试小说1', progress: '第10章' },
-                { book_title: '测试小说2', progress: '第5章' }
-            ]
-        };
-        
-        content.innerHTML = `
+    // 刷新用户列表
+    function refreshUsers() {
+        loadStats();
+        loadUsers();
+        showAlert('用户列表已刷新', 'success');
+    }
+
+    // 显示用户详情
+    async function showUserDetail(userId) {
+        const modal = new bootstrap.Modal(document.getElementById('userDetailModal'));
+        const content = document.getElementById('userDetailContent');
+        const token = localStorage.getItem('token');
+
+        content.innerHTML = '<div class="text-center"><div class="spinner-border"></div></div>';
+        modal.show();
+
+        try {
+            // 获取用户详情
+            const userResponse = await fetch(`/api/users/${userId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!userResponse.ok) {
+                throw new Error('获取用户详情失败');
+            }
+
+            const user = await userResponse.json();
+
+            // 获取用户阅读进度
+            const progressResponse = await fetch(`/api/users/${userId}/reading-progress`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            let readingProgress = [];
+            if (progressResponse.ok) {
+                readingProgress = await progressResponse.json();
+            }
+
+            content.innerHTML = `
             <div class="row">
                 <div class="col-md-4 text-center">
                     <div class="avatar-lg bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 80px; height: 80px; font-size: 2rem;">
@@ -267,79 +332,180 @@ async function showUserDetail(userId) {
                             <td>${formatDate(user.created_at)}</td>
                         </tr>
                         <tr>
-                            <td><strong>最后登录:</strong></td>
-                            <td>${formatDate(user.last_login)}</td>
-                        </tr>
-                        <tr>
                             <td><strong>书籍数量:</strong></td>
                             <td>${user.books_count} 本</td>
                         </tr>
+                        <tr>
+                            <td><strong>阅读进度数:</strong></td>
+                            <td>${user.reading_progress_count} 条</td>
+                        </tr>
                     </table>
                     
-                    <h6 class="mt-3">阅读进度</h6>
-                    <div class="list-group list-group-flush">
-                        ${user.reading_progress.map(item => `
-                            <div class="list-group-item px-0">
-                                <div class="d-flex justify-content-between">
-                                    <span>${item.book_title}</span>
-                                    <small class="text-muted">${item.progress}</small>
+                    <h6 class="mt-3">最近阅读</h6>
+                    ${readingProgress.length > 0 ? `
+                        <div class="list-group list-group-flush">
+                            ${readingProgress.map(item => `
+                                <div class="list-group-item px-0">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <div>${item.book_title}</div>
+                                            <small class="text-muted">第 ${item.current_chapter} 章</small>
+                                        </div>
+                                        <small class="text-muted">${formatDate(item.last_read_at)}</small>
+                                    </div>
                                 </div>
-                            </div>
-                        `).join('')}
-                    </div>
+                            `).join('')}
+                        </div>
+                    ` : '<p class="text-muted small">暂无阅读记录</p>'}
                 </div>
             </div>
         `;
-        
-    } catch (error) {
-        content.innerHTML = '<div class="text-center text-danger">加载用户详情失败</div>';
-    }
-}
 
-// 切换用户状态
-async function toggleUserStatus(userId) {
-    if (!confirm('确定要切换用户状态吗？')) {
-        return;
+        } catch (error) {
+            console.error('加载用户详情失败:', error);
+            content.innerHTML = '<div class="text-center text-danger">加载用户详情失败: ' + error.message + '</div>';
+        }
     }
-    
-    try {
-        // 这里应该调用API切换用户状态
-        showAlert('用户状态切换成功', 'success');
-        loadUsers();
-    } catch (error) {
-        showAlert('操作失败', 'danger');
+
+    // 切换用户状态
+    async function toggleUserStatus(userId, currentStatus) {
+        const newStatus = !currentStatus;
+        const action = newStatus ? '启用' : '禁用';
+
+        if (!confirm(`确定要${action}该用户吗？`)) {
+            return;
+        }
+
+        const token = localStorage.getItem('token');
+
+        try {
+            const response = await fetch(`/api/users/${userId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    is_active: newStatus
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || '操作失败');
+            }
+
+            showAlert(`用户${action}成功`, 'success');
+            loadUsers();
+        } catch (error) {
+            console.error('切换用户状态失败:', error);
+            showAlert('操作失败: ' + error.message, 'danger');
+        }
     }
-}
 
-// 导出用户数据
-function exportUsers() {
-    showAlert('导出功能待实现', 'info');
-}
+    // 删除用户
+    async function deleteUser(userId, username) {
+        if (!confirm(`确定要删除用户 "${username}" 吗？此操作不可恢复！`)) {
+            return;
+        }
 
-// 格式化日期
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
+        const token = localStorage.getItem('token');
+
+        try {
+            const response = await fetch(`/api/users/${userId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || '删除失败');
+            }
+
+            showAlert('用户删除成功', 'success');
+            loadUsers();
+        } catch (error) {
+            console.error('删除用户失败:', error);
+            showAlert('删除失败: ' + error.message, 'danger');
+        }
+    }
+
+    // 导出用户数据
+    async function exportUsers() {
+        const token = localStorage.getItem('token');
+
+        try {
+            const response = await fetch('/api/users/', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('获取用户数据失败');
+            }
+
+            const users = await response.json();
+
+            // 转换为CSV格式
+            const headers = ['ID', '用户名', '邮箱', '状态', '注册时间'];
+            const csvContent = [
+                headers.join(','),
+                ...users.map(user => [
+                    user.id,
+                    user.username,
+                    user.email,
+                    user.is_active ? '活跃' : '禁用',
+                    formatDate(user.created_at)
+                ].join(','))
+            ].join('\n');
+
+            // 创建下载链接
+            const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+
+            link.setAttribute('href', url);
+            link.setAttribute('download', `users_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showAlert('用户数据导出成功', 'success');
+        } catch (error) {
+            console.error('导出失败:', error);
+            showAlert('导出失败: ' + error.message, 'danger');
+        }
+    }
+
+    // 格式化日期
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
 </script>
 
 <style>
-.avatar-sm {
-    width: 32px;
-    height: 32px;
-    font-size: 0.875rem;
-}
+    .avatar-sm {
+        width: 32px;
+        height: 32px;
+        font-size: 0.875rem;
+    }
 
-.avatar-lg {
-    width: 64px;
-    height: 64px;
-    font-size: 1.5rem;
-}
+    .avatar-lg {
+        width: 64px;
+        height: 64px;
+        font-size: 1.5rem;
+    }
 </style>
 {% endblock %}

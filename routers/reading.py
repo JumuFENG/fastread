@@ -87,7 +87,8 @@ async def get_reading_history(
                 "id": book.id,
                 "title": book.title,
                 "author": book.author,
-                "cover_url": book.cover_url
+                "cover_url": book.cover_url,
+                "total_chapters": book.total_chapters
             },
             "progress": {
                 "current_chapter": progress.current_chapter,

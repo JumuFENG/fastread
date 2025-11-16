@@ -547,6 +547,13 @@ async function showReadingHistory() {
         return;
     }
 
+    // 显示模态框
+    const modal = new bootstrap.Modal(document.getElementById('readingHistoryModal'));
+    const content = document.getElementById('readingHistoryContent');
+    
+    content.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
+    modal.show();
+
     try {
         const response = await fetch('/api/reading/history', {
             headers: {
@@ -558,21 +565,93 @@ async function showReadingHistory() {
             const history = await response.json();
 
             if (history.length === 0) {
-                showAlert('暂无阅读历史', 'info');
+                content.innerHTML = `
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-book display-1"></i>
+                        <p class="mt-3">暂无阅读历史</p>
+                        <p class="small">开始阅读一本书籍后，这里会显示您的阅读记录</p>
+                    </div>
+                `;
                 return;
             }
 
-            // 这里可以显示一个模态框展示阅读历史
-            console.log('阅读历史:', history);
-            showAlert('阅读历史功能待完善', 'info');
+            // 显示阅读历史列表
+            content.innerHTML = `
+                <div class="list-group list-group-flush">
+                    ${history.map(item => `
+                        <div class="list-group-item list-group-item-action" onclick="continueReading(${item.book.id})">
+                            <div class="row align-items-center">
+                                <div class="col-md-2">
+                                    <img src="${item.book.cover_url || '/static/images/default-cover.jpg'}" 
+                                         class="img-fluid rounded" 
+                                         alt="${item.book.title}"
+                                         style="max-height: 80px; object-fit: cover;">
+                                </div>
+                                <div class="col-md-7">
+                                    <h6 class="mb-1">${item.book.title}</h6>
+                                    <p class="mb-1 text-muted small">
+                                        <i class="bi bi-person"></i> ${item.book.author || '未知作者'}
+                                    </p>
+                                    <p class="mb-0 text-muted small">
+                                        <i class="bi bi-bookmark"></i> 
+                                        读到第 ${item.progress.current_chapter} 章
+                                        ${item.book.total_chapters ? ` / 共 ${item.book.total_chapters} 章` : ''}
+                                    </p>
+                                </div>
+                                <div class="col-md-3 text-end">
+                                    <div class="mb-2">
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar" role="progressbar" 
+                                                 style="width: ${item.book.total_chapters ? (item.progress.current_chapter / item.book.total_chapters * 100).toFixed(1) : 0}%">
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">
+                                            ${item.book.total_chapters ? (item.progress.current_chapter / item.book.total_chapters * 100).toFixed(1) : 0}%
+                                        </small>
+                                    </div>
+                                    <small class="text-muted">
+                                        <i class="bi bi-clock"></i> ${formatDate(item.progress.last_read_at)}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div class="mt-3 text-center">
+                    <small class="text-muted">
+                        共 ${history.length} 条阅读记录
+                    </small>
+                </div>
+            `;
 
         } else {
-            showAlert('获取阅读历史失败', 'danger');
+            content.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i> 获取阅读历史失败
+                </div>
+            `;
         }
     } catch (error) {
         console.error('获取阅读历史失败:', error);
-        showAlert('获取阅读历史失败', 'danger');
+        content.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle"></i> 获取阅读历史失败: ${error.message}
+            </div>
+        `;
     }
+}
+
+// 继续阅读
+function continueReading(bookId) {
+    // 关闭模态框
+    const modal = bootstrap.Modal.getInstance(document.getElementById('readingHistoryModal'));
+    if (modal) {
+        modal.hide();
+    }
+    
+    // 跳转到阅读页面
+    window.location.href = `/book/${bookId}`;
 }
 
 // 显示提示信息

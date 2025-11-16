@@ -1,0 +1,541 @@
+{% extends "base.html" %}
+
+{% block title %}我的模板 - FastRead{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="bi bi-file-text"></i> 我的模板</h2>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="showCreateTemplateForm()">
+                    <i class="bi bi-plus-circle"></i> 创建模板
+                </button>
+                <button class="btn btn-outline-primary" onclick="refreshTemplates()">
+                    <i class="bi bi-arrow-clockwise"></i> 刷新
+                </button>
+                <button class="btn btn-outline-success" onclick="exportTemplates()">
+                    <i class="bi bi-download"></i> 导出
+                </button>
+            </div>
+        </div>
+
+        <!-- 筛选和搜索 -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label">按标签筛选</label>
+                        <div id="tagFilters" class="d-flex flex-wrap gap-1">
+                            <span class="badge bg-secondary">加载中...</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">搜索模板</label>
+                        <input type="text" class="form-control" id="templateSearch" 
+                               placeholder="输入模板名称或关键词" onkeyup="searchTemplates()">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 模板列表 -->
+        <div id="templatesContainer">
+            <div class="text-center py-5">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">加载中...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 空状态 -->
+        <div id="emptyState" class="text-center py-5 d-none">
+            <i class="bi bi-file-text display-1 text-muted"></i>
+            <p class="mt-3 text-muted">暂无模板</p>
+            <p class="small text-muted">创建模板可以快速生成重复性内容</p>
+            <button class="btn btn-primary mt-2" onclick="showCreateTemplateForm()">
+                <i class="bi bi-plus-circle"></i> 创建第一个模板
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 创建/编辑模板模态框 -->
+<div class="modal fade" id="templateModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="templateModalTitle">创建模板</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">模板名称 <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="templateName" 
+                           placeholder="输入模板名称" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">模板内容 <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="templateContent" rows="6" 
+                              placeholder="输入模板内容，使用 {关键词} 作为占位符&#10;例如：{person}走进了{place}" required></textarea>
+                    <small class="text-muted">
+                        使用 {关键词} 格式标记需要替换的部分，例如：{name}、{place}、{action}
+                    </small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">关键词</label>
+                    <div id="keywordsList" class="mb-2">
+                        <!-- 关键词列表 -->
+                    </div>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="extractKeywordsFromContent()">
+                        <i class="bi bi-search"></i> 自动提取关键词
+                    </button>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">标签</label>
+                    <input type="text" class="form-control" id="templateTags" 
+                           placeholder="输入标签，用逗号分隔，例如：动作,描写,对话">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">描述</label>
+                    <textarea class="form-control" id="templateDescription" rows="2" 
+                              placeholder="简要描述模板的用途"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveTemplate()">
+                    <i class="bi bi-save"></i> 保存
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let allTemplates = [];
+let filteredTemplates = [];
+let selectedTags = [];
+let currentEditTemplateId = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        showAlert('请先登录', 'warning');
+        window.location.href = '/auth';
+        return;
+    }
+    
+    loadTemplates();
+});
+
+// 加载模板
+async function loadTemplates() {
+    const token = localStorage.getItem('token');
+    const container = document.getElementById('templatesContainer');
+    const emptyState = document.getElementById('emptyState');
+    
+    try {
+        const response = await fetch('/api/templates/', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('获取模板失败');
+        }
+        
+        allTemplates = await response.json();
+        filteredTemplates = [...allTemplates];
+        
+        if (allTemplates.length === 0) {
+            container.classList.add('d-none');
+            emptyState.classList.remove('d-none');
+            return;
+        }
+        
+        // 加载标签筛选器
+        loadTagFilters();
+        
+        // 显示模板
+        displayTemplates(filteredTemplates);
+        
+    } catch (error) {
+        console.error('加载模板失败:', error);
+        container.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle"></i> 加载模板失败: ${error.message}
+            </div>
+        `;
+    }
+}
+
+// 加载标签筛选器
+function loadTagFilters() {
+    const tagFiltersDiv = document.getElementById('tagFilters');
+    const allTags = new Set();
+    
+    allTemplates.forEach(template => {
+        if (template.tags && Array.isArray(template.tags)) {
+            template.tags.forEach(tag => allTags.add(tag));
+        }
+    });
+    
+    if (allTags.size === 0) {
+        tagFiltersDiv.innerHTML = '<small class="text-muted">暂无标签</small>';
+        return;
+    }
+    
+    tagFiltersDiv.innerHTML = Array.from(allTags).map(tag => `
+        <button class="btn btn-sm btn-outline-secondary tag-filter" 
+                data-tag="${tag}" 
+                onclick="toggleTagFilter('${tag}')">
+            ${tag}
+        </button>
+    `).join('');
+}
+
+// 切换标签筛选
+function toggleTagFilter(tag) {
+    const index = selectedTags.indexOf(tag);
+    if (index > -1) {
+        selectedTags.splice(index, 1);
+    } else {
+        selectedTags.push(tag);
+    }
+    
+    // 更新按钮样式
+    document.querySelectorAll('.tag-filter').forEach(btn => {
+        if (btn.dataset.tag === tag) {
+            if (selectedTags.includes(tag)) {
+                btn.classList.remove('btn-outline-secondary');
+                btn.classList.add('btn-secondary');
+            } else {
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-outline-secondary');
+            }
+        }
+    });
+    
+    filterTemplates();
+}
+
+// 筛选模板
+function filterTemplates() {
+    const searchText = document.getElementById('templateSearch').value.toLowerCase();
+    
+    filteredTemplates = allTemplates.filter(template => {
+        // 标签筛选
+        const matchTags = selectedTags.length === 0 || 
+            (template.tags && selectedTags.some(tag => template.tags.includes(tag)));
+        
+        // 搜索筛选
+        const matchSearch = !searchText || 
+            template.name.toLowerCase().includes(searchText) ||
+            template.content.toLowerCase().includes(searchText) ||
+            (template.description && template.description.toLowerCase().includes(searchText));
+        
+        return matchTags && matchSearch;
+    });
+    
+    displayTemplates(filteredTemplates);
+}
+
+// 搜索模板
+function searchTemplates() {
+    filterTemplates();
+}
+
+// 显示模板
+function displayTemplates(templates) {
+    const container = document.getElementById('templatesContainer');
+    const emptyState = document.getElementById('emptyState');
+    
+    if (templates.length === 0) {
+        container.innerHTML = `
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> 没有找到符合条件的模板
+            </div>
+        `;
+        return;
+    }
+    
+    container.classList.remove('d-none');
+    emptyState.classList.add('d-none');
+    
+    container.innerHTML = templates.map(template => `
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="flex-grow-1">
+                        <h5 class="card-title mb-1">${template.name}</h5>
+                        ${template.description ? `<p class="text-muted small mb-2">${template.description}</p>` : ''}
+                        <div class="mb-2">
+                            ${template.tags && template.tags.length > 0 ? 
+                                template.tags.map(tag => `<span class="badge bg-secondary me-1">${tag}</span>`).join('') 
+                                : '<span class="text-muted small">无标签</span>'}
+                        </div>
+                    </div>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary" onclick="editTemplate(${template.id})" title="编辑">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-outline-info" onclick="previewTemplate(${template.id})" title="预览">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="deleteTemplate(${template.id})" title="删除">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="template-content p-3 bg-light rounded mb-2">
+                    <pre class="mb-0" style="white-space: pre-wrap; font-family: inherit;">${template.content}</pre>
+                </div>
+                ${template.keywords && template.keywords.length > 0 ? `
+                    <div class="template-keywords">
+                        <small class="text-muted">
+                            <i class="bi bi-key"></i> 关键词: 
+                            ${template.keywords.map(kw => `<code>{${kw}}</code>`).join(', ')}
+                        </small>
+                    </div>
+                ` : ''}
+                <div class="text-muted small mt-2">
+                    <i class="bi bi-clock"></i> ${formatDate(template.created_at)}
+                    ${template.updated_at !== template.created_at ? 
+                        ` | <i class="bi bi-pencil"></i> 更新于 ${formatDate(template.updated_at)}` : ''}
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// 显示创建模板表单
+function showCreateTemplateForm() {
+    currentEditTemplateId = null;
+    document.getElementById('templateModalTitle').textContent = '创建模板';
+    document.getElementById('templateName').value = '';
+    document.getElementById('templateContent').value = '';
+    document.getElementById('templateTags').value = '';
+    document.getElementById('templateDescription').value = '';
+    document.getElementById('keywordsList').innerHTML = '';
+    
+    const modal = new bootstrap.Modal(document.getElementById('templateModal'));
+    modal.show();
+}
+
+// 编辑模板
+function editTemplate(templateId) {
+    const template = allTemplates.find(t => t.id === templateId);
+    if (!template) return;
+    
+    currentEditTemplateId = templateId;
+    document.getElementById('templateModalTitle').textContent = '编辑模板';
+    document.getElementById('templateName').value = template.name;
+    document.getElementById('templateContent').value = template.content;
+    document.getElementById('templateTags').value = template.tags ? template.tags.join(', ') : '';
+    document.getElementById('templateDescription').value = template.description || '';
+    
+    // 显示关键词
+    if (template.keywords && template.keywords.length > 0) {
+        displayKeywords(template.keywords);
+    }
+    
+    const modal = new bootstrap.Modal(document.getElementById('templateModal'));
+    modal.show();
+}
+
+// 从内容提取关键词
+function extractKeywordsFromContent() {
+    const content = document.getElementById('templateContent').value;
+    const regex = /\{([^}]+)\}/g;
+    const keywords = [];
+    let match;
+    
+    while ((match = regex.exec(content)) !== null) {
+        if (!keywords.includes(match[1])) {
+            keywords.push(match[1]);
+        }
+    }
+    
+    if (keywords.length === 0) {
+        showAlert('未找到关键词，请使用 {关键词} 格式', 'warning');
+        return;
+    }
+    
+    displayKeywords(keywords);
+    showAlert(`找到 ${keywords.length} 个关键词`, 'success');
+}
+
+// 显示关键词列表
+function displayKeywords(keywords) {
+    const keywordsListDiv = document.getElementById('keywordsList');
+    keywordsListDiv.innerHTML = keywords.map(kw => `
+        <span class="badge bg-primary me-1 mb-1">
+            <code class="text-white">{${kw}}</code>
+        </span>
+    `).join('');
+}
+
+// 保存模板
+async function saveTemplate() {
+    const name = document.getElementById('templateName').value.trim();
+    const content = document.getElementById('templateContent').value.trim();
+    const tags = document.getElementById('templateTags').value.split(',').map(t => t.trim()).filter(t => t);
+    const description = document.getElementById('templateDescription').value.trim();
+    
+    if (!name || !content) {
+        showAlert('请填写模板名称和内容', 'warning');
+        return;
+    }
+    
+    // 提取关键词
+    const regex = /\{([^}]+)\}/g;
+    const keywords = [];
+    let match;
+    while ((match = regex.exec(content)) !== null) {
+        if (!keywords.includes(match[1])) {
+            keywords.push(match[1]);
+        }
+    }
+    
+    const token = localStorage.getItem('token');
+    const url = currentEditTemplateId 
+        ? `/api/templates/${currentEditTemplateId}` 
+        : '/api/templates/';
+    const method = currentEditTemplateId ? 'PUT' : 'POST';
+    
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                name: name,
+                content: content,
+                keywords: keywords,
+                tags: tags,
+                description: description
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || '保存失败');
+        }
+        
+        showAlert(currentEditTemplateId ? '模板更新成功' : '模板创建成功', 'success');
+        
+        // 关闭模态框
+        const modal = bootstrap.Modal.getInstance(document.getElementById('templateModal'));
+        modal.hide();
+        
+        // 重新加载
+        loadTemplates();
+        
+    } catch (error) {
+        console.error('保存模板失败:', error);
+        showAlert('保存失败: ' + error.message, 'danger');
+    }
+}
+
+// 预览模板
+function previewTemplate(templateId) {
+    const template = allTemplates.find(t => t.id === templateId);
+    if (!template) return;
+    
+    showAlert(`模板预览：\n\n${template.content}`, 'info');
+}
+
+// 删除模板
+async function deleteTemplate(templateId) {
+    if (!confirm('确定要删除这个模板吗？')) {
+        return;
+    }
+    
+    const token = localStorage.getItem('token');
+    
+    try {
+        const response = await fetch(`/api/templates/${templateId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('删除失败');
+        }
+        
+        showAlert('模板删除成功', 'success');
+        loadTemplates();
+        
+    } catch (error) {
+        console.error('删除模板失败:', error);
+        showAlert('删除失败: ' + error.message, 'danger');
+    }
+}
+
+// 刷新模板
+function refreshTemplates() {
+    selectedTags = [];
+    document.getElementById('templateSearch').value = '';
+    loadTemplates();
+    showAlert('模板列表已刷新', 'success');
+}
+
+// 导出模板
+function exportTemplates() {
+    if (allTemplates.length === 0) {
+        showAlert('没有可导出的模板', 'warning');
+        return;
+    }
+    
+    const data = JSON.stringify(allTemplates, null, 2);
+    const blob = new Blob([data], { type: 'application/json;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `templates_${new Date().toISOString().split('T')[0]}.json`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showAlert('模板导出成功', 'success');
+}
+
+// 格式化日期
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+</script>
+
+<style>
+.template-content {
+    line-height: 1.6;
+}
+
+.tag-filter {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tag-filter:hover {
+    transform: translateY(-1px);
+}
+</style>
+{% endblock %}

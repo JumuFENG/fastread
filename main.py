@@ -4,7 +4,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 import uvicorn
 from database import engine, Base
-from routers import books, reading, sources, auth, excerpts, rewrites, sensitive_words
+from routers import books, reading, sources, auth, excerpts, rewrites, sensitive_words, users
 from routers import templates as rtemplates
 
 # 创建数据库表
@@ -27,6 +27,7 @@ app.include_router(excerpts.router, prefix="/api/excerpts", tags=["摘录管理"
 app.include_router(rtemplates.router, prefix="/api/templates", tags=["模板管理"])
 app.include_router(rewrites.router, prefix="/api/rewrites", tags=["重写功能"])
 app.include_router(sensitive_words.router, prefix="/api/sensitive-words", tags=["敏感词管理"])
+app.include_router(users.router, prefix="/api/users", tags=["用户管理"])
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
@@ -39,6 +40,14 @@ async def auth_page(request: Request):
 @app.get("/users", response_class=HTMLResponse)
 async def users_page(request: Request):
     return templates.TemplateResponse("users.html", {"request": request})
+
+@app.get("/excerpts", response_class=HTMLResponse)
+async def excerpts_page(request: Request):
+    return templates.TemplateResponse("excerpts.html", {"request": request})
+
+@app.get("/my-templates", response_class=HTMLResponse)
+async def my_templates_page(request: Request):
+    return templates.TemplateResponse("my_templates.html", {"request": request})
 
 @app.get("/book/{book_id}", response_class=HTMLResponse)
 async def read_book(request: Request, book_id: int):
