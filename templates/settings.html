@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}阅读设置 - FastRead{% endblock %}
+
+{% block content %}
+<!-- 阅读设置面板 -->
+<div id="settingsPanel" class="">
+    <h6>阅读设置</h6>
+    <div class="row">
+        <div class="col-md-6">
+            <label class="form-label">字体大小</label>
+            <input type="range" class="form-range" id="fontSizeSlider" min="12" max="24" value="16"
+                onchange="changeFontSize(this.value)">
+            <small class="text-muted">当前: <span id="fontSizeValue">16px</span></small>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">行间距</label>
+            <input type="range" class="form-range" id="lineHeightSlider" min="1.2" max="2.5" step="0.1"
+                value="1.6" onchange="changeLineHeight(this.value)">
+            <small class="text-muted">当前: <span id="lineHeightValue">1.6</span></small>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">背景主题</label>
+            <select class="form-select form-select-sm" id="themeSelect"
+                onchange="changeTheme(this.value)">
+                <option value="light">浅色</option>
+                <option value="dark">深色</option>
+                <option value="sepia">护眼米色</option>
+                <option value="green">护眼绿色</option>
+                <option value="blue">护眼蓝色</option>
+                <option value="gray">护眼灰色</option>
+                <option value="night">夜间模式</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">字体</label>
+            <select class="form-select form-select-sm" id="fontSelect"
+                onchange="changeFont(this.value)">
+                <option value="system">系统默认</option>
+                <option value="serif">宋体</option>
+                <option value="sans-serif">黑体</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-check-label">
+                <input type="checkbox" class="form-check-input" id="autoScrollCheckbox"
+                    onchange="toggleAutoScroll()">
+                自动滚动</label>
+            <input type="number" class="form-control form-control-sm" id="autoScrollSpeed"
+                placeholder="滚动速度 (ms)" value="10" min="20"
+                style="width: 70px; display: inline-block; margin-left: 10px;"
+                onchange="updateAutoScrollSpeed()">
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const fontSize = localStorage.getItem('readerFontSize') || '16';
+        const lineHeight = localStorage.getItem('readerLineHeight') || '1.6';
+        const theme = localStorage.getItem('readerTheme') || 'light';
+        const font = localStorage.getItem('readerFont') || 'system';
+
+        document.getElementById('fontSizeSlider').value = fontSize;
+        document.getElementById('lineHeightSlider').value = lineHeight;
+        document.getElementById('themeSelect').value = theme;
+        document.getElementById('fontSelect').value = font;
+        document.getElementById('autoScrollCheckbox').checked = autoScrollEnabled;
+        document.getElementById('autoScrollSpeed').value = autoScrollSpeed;
+    })
+
+    // 阅读设置功能
+    function changeFontSize(size) {
+        document.getElementById('fontSizeValue').textContent = size + 'px';
+        localStorage.setItem('readerFontSize', size);
+    }
+
+    function changeLineHeight(height) {
+        document.getElementById('lineHeightValue').textContent = height;
+        localStorage.setItem('readerLineHeight', height);
+    }
+
+    function changeTheme(theme) {
+        const content = document.querySelector('.reader-content');
+        const body = document.body;
+
+        // 移除所有主题类
+        content.className = content.className.replace(/theme-\w+/g, '');
+        body.className = body.className.replace(/theme-\w+/g, '');
+
+        // 添加新主题类
+        content.classList.add('theme-' + theme);
+        body.classList.add('theme-' + theme);
+
+        localStorage.setItem('readerTheme', theme);
+    }
+
+    function changeFont(font) {
+        localStorage.setItem('readerFont', font);
+    }
+
+</script>
+
+{% endblock %}

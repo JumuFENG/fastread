@@ -23,21 +23,21 @@
         <!-- 筛选和搜索 -->
         <div class="card mb-4">
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-4">
-                        <label class="form-label">按书籍筛选</label>
-                        <select class="form-select" id="bookFilter" onchange="filterExcerpts()">
+                <div class="d-flex gap-3">
+                    <div class="d-flex align-items-center gap-1">
+                        <label class="form-label mb-0">按书籍筛选</label>
+                        <select class="form-select" id="bookFilter" style="width: auto;" onchange="filterExcerpts()">
                             <option value="">全部书籍</option>
                         </select>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label">搜索摘录内容</label>
+                    <div class="d-flex align-items-center gap-1">
+                        <label class="form-label mb-0">搜索摘录内容</label>
                         <input type="text" class="form-control" id="excerptSearch" placeholder="输入关键词搜索"
-                            onkeyup="searchExcerpts()">
+                            style="width: auto;" onkeyup="searchExcerpts()">
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label">排序方式</label>
-                        <select class="form-select" id="sortOrder" onchange="sortExcerpts()">
+                    <div class="d-flex align-items-center gap-1">
+                        <label class="form-label mb-0">排序方式</label>
+                        <select class="form-select" id="sortOrder" style="width: auto;" onchange="sortExcerpts()">
                             <option value="newest">最新优先</option>
                             <option value="oldest">最早优先</option>
                             <option value="book">按书籍分组</option>

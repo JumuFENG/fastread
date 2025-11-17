@@ -5,11 +5,11 @@
 {% block content %}
 <!-- 固定工具栏 -->
 <div class="reader-toolbar">
+    <button id="readerToolbarHome" class="btn btn-outline-secondary btn-sm" title="书架">
+       <a class="nav-link" href="/"> <i class="bi bi-book"></i></a>
+    </button>
     <button class="btn btn-outline-secondary btn-sm" onclick="toggleChapterList()" title="章节目录">
         <i class="bi bi-list"></i>
-    </button>
-    <button class="btn btn-outline-secondary btn-sm" onclick="toggleSettings()" title="阅读设置">
-        <i class="bi bi-gear"></i>
     </button>
     <button class="btn btn-outline-info btn-sm" onclick="toggleTemplates()" title="模板管理">
         <i class="bi bi-file-text"></i>
@@ -53,62 +53,6 @@
                     <div>
                         <h4><a id="bookTitle" href="#" target="_blank">加载中...</a></h4>
                         <h5 id="chapterTitle" class="text-muted">加载中...</h5>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 阅读设置面板 -->
-            <div id="settingsPanel" class="floating-panel d-none">
-                <div class="panel-header">
-                    <h6>阅读设置</h6>
-                    <button type="button" class="btn-close" onclick="hideAllPanels()" aria-label="关闭"></button>
-                </div>
-                <div class="panel-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label class="form-label">字体大小</label>
-                            <input type="range" class="form-range" id="fontSizeSlider" min="12" max="24" value="16"
-                                onchange="changeFontSize(this.value)">
-                            <small class="text-muted">当前: <span id="fontSizeValue">16px</span></small>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">行间距</label>
-                            <input type="range" class="form-range" id="lineHeightSlider" min="1.2" max="2.5" step="0.1"
-                                value="1.6" onchange="changeLineHeight(this.value)">
-                            <small class="text-muted">当前: <span id="lineHeightValue">1.6</span></small>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">背景主题</label>
-                            <select class="form-select form-select-sm" id="themeSelect"
-                                onchange="changeTheme(this.value)">
-                                <option value="light">浅色</option>
-                                <option value="dark">深色</option>
-                                <option value="sepia">护眼米色</option>
-                                <option value="green">护眼绿色</option>
-                                <option value="blue">护眼蓝色</option>
-                                <option value="gray">护眼灰色</option>
-                                <option value="night">夜间模式</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">字体</label>
-                            <select class="form-select form-select-sm" id="fontSelect"
-                                onchange="changeFont(this.value)">
-                                <option value="system">系统默认</option>
-                                <option value="serif">宋体</option>
-                                <option value="sans-serif">黑体</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-check-label">
-                                <input type="checkbox" class="form-check-input" id="autoScrollCheckbox"
-                                    onchange="toggleAutoScroll()">
-                                自动滚动</label>
-                            <input type="number" class="form-control form-control-sm" id="autoScrollSpeed"
-                                placeholder="滚动速度 (ms)" value="10" min="20"
-                                style="width: 70px; display: inline-block; margin-left: 10px;"
-                                onchange="updateAutoScrollSpeed()">
-                        </div>
                     </div>
                 </div>
             </div>
@@ -357,8 +301,7 @@
     let autoScrollSpeed = 30;
 
     document.addEventListener('DOMContentLoaded', function () {
-        const bookId = {{ book_id | tojson
-    }};
+        const bookId = {{ book_id | tojson }};
 
     loadBook(bookId).then(() => {
         loadSensitiveWords();
@@ -379,20 +322,6 @@
         } else if (e.key === 'Escape') {
             // ESC键关闭所有面板
             hideAllPanels();
-        }
-    });
-
-    // 窗口大小变化监听
-    window.addEventListener('resize', function () {
-        const isMobile = window.innerWidth <= 768;
-        const settingsPanel = document.getElementById('settingsPanel');
-
-        if (!settingsPanel.classList.contains('d-none')) {
-            if (isMobile) {
-                document.body.classList.add('mobile-settings-active');
-            } else {
-                document.body.classList.remove('mobile-settings-active');
-            }
         }
     });
     });
@@ -519,13 +448,16 @@
             document.getElementById('prevChapter').disabled = chapterIndex === 0;
             document.getElementById('nextChapter').disabled = chapterIndex === chapters.length - 1;
 
+
             updateChapterProgress();
 
-            // 强制保存阅读进度（章节切换时）
-            saveReadingProgress(true);
+            if (chapterIndex == readingProgress.current_chapter - 1) {
+                document.querySelectorAll('.chapter-text p')[readingProgress.reading_position].scrollIntoView();
+            } else {
+                // 强制保存阅读进度（章节切换时）
+                saveReadingProgress(true);
+            }
 
-            // 滚动到顶部
-            window.scrollTo(0, 0);
             contentDiv.focus();
             if (autoScrollTimer) {
                 if (autoScrollEnabled) {
@@ -620,15 +552,16 @@
     }
 
     async function saveReadingProgress(force = false) {
+        const p1 = Array.from(document.querySelector('.chapter-text').children).findIndex(node => node.getBoundingClientRect().bottom > 0);
         const newProgress = {
             current_chapter: currentChapterIndex + 1,
-            reading_position: window.pageYOffset
+            reading_position: p1
         };
 
         // 检查进度是否有变化（除非强制保存）
         if (!force && lastSavedProgress &&
             lastSavedProgress.current_chapter === newProgress.current_chapter &&
-            Math.abs(lastSavedProgress.reading_position - newProgress.reading_position) < 100) {
+            Math.abs(lastSavedProgress.reading_position - newProgress.reading_position) < 2) {
             return;
         }
 
@@ -744,39 +677,6 @@
         }
     }
 
-    function toggleSettings() {
-        hideAllPanels();
-        const panel = document.getElementById('settingsPanel');
-        panel.classList.toggle('d-none');
-
-        // 检查是否为移动端
-        const isMobile = window.innerWidth <= 768;
-
-        if (!panel.classList.contains('d-none')) {
-            if (autoScrollTimer) {
-                stopAutoScroll();
-            }
-
-            // 移动端特殊处理
-            if (isMobile) {
-                document.body.classList.add('mobile-settings-active');
-                // 滚动到设置面板
-                setTimeout(() => {
-                    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }, 100);
-            }
-        } else {
-            if (autoScrollEnabled) {
-                startAutoScroll();
-            }
-
-            // 移除移动端特殊样式
-            if (isMobile) {
-                document.body.classList.remove('mobile-settings-active');
-            }
-        }
-    }
-
     function toggleTemplates() {
         const token = localStorage.getItem('token');
         if (!token) {
@@ -827,51 +727,14 @@
     }
 
     function hideAllPanels() {
-        document.getElementById('settingsPanel').classList.add('d-none');
         document.getElementById('templatesPanel').classList.add('d-none');
         document.getElementById('rewritePanel').classList.add('d-none');
         document.getElementById('sensitiveWordsPanel').classList.add('d-none');
-
-        // 移除移动端特殊样式
-        document.body.classList.remove('mobile-settings-active');
 
         // 恢复自动滚动
         if (autoScrollEnabled) {
             startAutoScroll();
         }
-    }
-
-    // 阅读设置功能
-    function changeFontSize(size) {
-        document.getElementById('fontSizeValue').textContent = size + 'px';
-        document.querySelector('.reader-content').style.fontSize = size + 'px';
-        localStorage.setItem('readerFontSize', size);
-    }
-
-    function changeLineHeight(height) {
-        document.getElementById('lineHeightValue').textContent = height;
-        document.querySelector('.reader-content').style.lineHeight = height;
-        localStorage.setItem('readerLineHeight', height);
-    }
-
-    function changeTheme(theme) {
-        const content = document.querySelector('.reader-content');
-        const body = document.body;
-
-        // 移除所有主题类
-        content.className = content.className.replace(/theme-\w+/g, '');
-        body.className = body.className.replace(/theme-\w+/g, '');
-
-        // 添加新主题类
-        content.classList.add('theme-' + theme);
-        body.classList.add('theme-' + theme);
-
-        localStorage.setItem('readerTheme', theme);
-    }
-
-    function changeFont(font) {
-        document.querySelector('.reader-content').style.fontFamily = font;
-        localStorage.setItem('readerFont', font);
     }
 
     function loadReaderSettings() {
@@ -880,17 +743,12 @@
         const theme = localStorage.getItem('readerTheme') || 'light';
         const font = localStorage.getItem('readerFont') || 'system';
 
-        document.getElementById('fontSizeSlider').value = fontSize;
-        document.getElementById('lineHeightSlider').value = lineHeight;
-        document.getElementById('themeSelect').value = theme;
-        document.getElementById('fontSelect').value = font;
-        document.getElementById('autoScrollCheckbox').checked = autoScrollEnabled;
-        document.getElementById('autoScrollSpeed').value = autoScrollSpeed;
-
-        changeFontSize(fontSize);
-        changeLineHeight(lineHeight);
-        changeTheme(theme);
-        changeFont(font);
+        const content = document.querySelector('.reader-content');
+        content.classList.add('theme-' + theme);
+        document.body.classList.add('theme-' + theme);
+        content.style.fontSize = fontSize + 'px';
+        content.style.lineHeight = lineHeight;
+        content.style.fontFamily = font;
     }
 
     async function loadSensitiveWords() {
@@ -1459,7 +1317,7 @@
 
     // 点击外部关闭面板
     document.addEventListener('click', function (e) {
-        const panels = ['settingsPanel', 'templatesPanel', 'rewritePanel', 'sensitiveWordsPanel'];
+        const panels = ['templatesPanel', 'rewritePanel', 'sensitiveWordsPanel'];
         const toolbar = document.querySelector('.reader-toolbar');
 
         if (!toolbar.contains(e.target)) {

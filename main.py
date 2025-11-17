@@ -49,6 +49,10 @@ async def excerpts_page(request: Request):
 async def my_templates_page(request: Request):
     return templates.TemplateResponse("my_templates.html", {"request": request})
 
+@app.get("/settings", response_class=HTMLResponse)
+async def settings_page(request: Request):
+    return templates.TemplateResponse("settings.html", {"request": request})
+
 @app.get("/book/{book_id}", response_class=HTMLResponse)
 async def read_book(request: Request, book_id: int):
     return templates.TemplateResponse("reader.html", {"request": request, "book_id": book_id})

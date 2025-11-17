@@ -1107,6 +1107,10 @@ body.offline::before {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
+#readerToolbarHome {
+    display: none;
+}
+
 /* 选中文本高亮 */
 ::selection {
     background-color: #007bff;
@@ -1150,20 +1154,11 @@ body.offline::before {
         margin: 1rem 0;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
-    
-    /* 移动端设置面板显示时隐藏章节内容 */
-    .mobile-settings-active #chapterContent {
-        display: none;
+
+    #readerToolbarHome {
+        display: block;
     }
-    
-    .mobile-settings-active .reader-navigation {
-        display: none;
-    }
-    
-    .mobile-settings-active .reader-header {
-        display: none;
-    }
-    
+
     /* 移动端面板头部样式优化 */
     .panel-header {
         position: sticky;
@@ -1213,13 +1208,7 @@ body.offline::before {
             transform: translateY(0);
         }
     }
-    
-    .mobile-settings-active #chapterContent,
-    .mobile-settings-active .reader-navigation,
-    .mobile-settings-active .reader-header {
-        animation: fadeOut 0.2s ease-out forwards;
-    }
-    
+
     @keyframes fadeOut {
         from {
             opacity: 1;
