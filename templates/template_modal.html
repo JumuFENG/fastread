@@ -1,0 +1,65 @@
+<!-- 创建/编辑模板模态框 -->
+<div class="modal fade" id="templateModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="templateModalTitle">创建模板</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex align-items-center gap-2">
+                    <label class="form-label"><span class="text-danger">*</span>模板名称 </label>
+                    <input type="text" id="templateName" placeholder="输入模板名称" required="" autocomplete="off"  class="form-control w-75">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label"><span class="text-danger">*</span>模板内容 </label>
+                    <textarea class="form-control" id="templateContent" rows="6" autocomplete="off"
+                                placeholder="输入模板内容，使用 {关键词} 作为占位符&#10;例如：{person}走进了{place}" required></textarea>
+                    <small class="text-muted">
+                        使用 {关键词} 格式标记需要替换的部分，例如：{name}、{place}、{action}
+                    </small>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="form-label">关键词设置</label>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="extractKeywords()"
+                            title="重置关键词列表并显示自动提取结果">
+                            <i class="bi bi-search"></i> 自动提取
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearKeywordsList()""
+                            title="清除未被选中的关键词，并将选择的关键词按字母排序">
+                            <i class="bi bi-file-text"></i> 整理
+                        </button>
+                    </div>
+                    <div id="keywordsList" class="d-flex flex-wrap gap-2"></div>
+                    <div class="mt-2 d-flex gap-2">
+                        <input type="text" class="form-control" id="customKeyword" placeholder="关键词"
+                            style="width: 150px;" autocomplete="off">
+                        <input type="text" class="form-control" id="customKeywordValue" placeholder="文本内容"
+                            style="width: 150px;" autocomplete="off">
+                        <button type="button" class="btn btn-outline-primary btn-sm"
+                            onclick="addCustomKeyword()">
+                            <i class="bi bi-plus"></i> 添加
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">标签设置</label>
+                    <div id="tagsList" class="d-flex flex-wrap gap-2"></div>
+                    <input type="text" class="form-control" id="templateTagInput" placeholder="输入标签，回车确认"
+                        autocomplete="off" style="width: 250px;" onchange="updateTagsList()">
+                </div>
+                <div class="mb-3">
+                    <textarea class="form-control" id="templateDescription" rows="2" autocomplete="off"
+                        placeholder="模板描述"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveTemplate()">
+                    <i class="bi bi-save"></i> 保存
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

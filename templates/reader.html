@@ -57,69 +57,6 @@
                 </div>
             </div>
 
-            <!-- 模板管理面板 -->
-            <div id="templatesPanel" class="floating-panel d-none" style="width: 70%;">
-                <div class="panel-header">
-                    <h6>模板管理</h6>
-                    <button type="button" class="btn-close" onclick="hideAllPanels()" aria-label="关闭"></button>
-                </div>
-                <div class="panel-body">
-                    <div class="mb-3">
-                        <button class="btn btn-outline-info btn-sm" onclick="loadUserTemplates()">
-                            <i class="bi bi-list"></i> 我的模板
-                        </button>
-                    </div>
-
-                    <!-- 模板列表 -->
-                    <div id="templatesList" class="d-flex flex-wrap gap-2">
-                        <!-- 模板列表 -->
-                    </div>
-
-                    <!-- 创建模板表单 -->
-                    <div id="createTemplateForm" class="d-none">
-                        <div class="mb-3">
-                            <label class="form-label">新建模板</label>
-                            <input type="text" class="form-control" id="templateName" placeholder="输入模板名称">
-                        </div>
-                        <div class="mb-3">
-                            <textarea class="form-control" id="templateContent" rows="4" placeholder="模板内容"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">关键词设置</label>
-                            <div id="keywordsList" class="d-flex flex-wrap gap-2"></div>
-                            <div class="mt-2 d-flex gap-2">
-                                <input type="text" class="form-control" id="customKeyword" placeholder="关键词"
-                                    style="width: 100px;" autocomplete="off">
-                                <input type="text" class="form-control" id="customKeywordValue" placeholder="文本内容"
-                                    style="width: 150px;" autocomplete="off">
-                                <button type="button" class="btn btn-outline-primary btn-sm"
-                                    onclick="addCustomKeyword()">
-                                    <i class="bi bi-plus"></i> 添加
-                                </button>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">标签设置</label>
-                            <div id="tagsList" class="d-flex flex-wrap gap-2"></div>
-                            <input type="text" class="form-control" id="templateTagInput" placeholder="输入标签，回车确认"
-                                autocomplete="off" style="width: 250px;" onchange="updateTagsList()">
-                        </div>
-                        <div class="mb-3">
-                            <textarea class="form-control" id="templateDescription" rows="2"
-                                placeholder="模板描述"></textarea>
-                        </div>
-                        <div class="d-flex gap-2">
-                            <button class="btn btn-success btn-sm" onclick="saveTemplate()">
-                                <i class="bi bi-save"></i> 保存
-                            </button>
-                            <button class="btn btn-secondary btn-sm" onclick="cancelCreateTemplate()">
-                                取消
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- 重写/创作面板 -->
             <div id="rewritePanel" class="floating-panel d-none" style="width: 70%;">
                 <div class="panel-header">
@@ -259,36 +196,16 @@
 </div>
 {% endblock %}
 
+{% block modals %}
+    {% include "template_modal.html" %}
+{% endblock %}
+
 {% block styles %}
 {% endblock %}
 
 {% block scripts %}
+<script src="/static/js/template-modal.js"></script>
 <script>
-    // 本地showAlert函数
-    function showAlert(message, type = 'info') {
-        console.log(`[${type.toUpperCase()}] ${message}`);
-
-        // 创建简单的提示
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${type} position-fixed`;
-        alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-        alertDiv.innerHTML = `
-        <div class="d-flex align-items-center">
-            <span class="flex-grow-1">${message}</span>
-            <button type="button" class="btn-close ms-2" onclick="this.parentElement.parentElement.remove()"></button>
-        </div>
-    `;
-
-        document.body.appendChild(alertDiv);
-
-        // 3秒后自动移除
-        setTimeout(() => {
-            if (alertDiv.parentElement) {
-                alertDiv.remove();
-            }
-        }, 3000);
-    }
-
     let currentBook = null;
     let chapters = [];
     let currentChapterIndex = 0;
@@ -316,8 +233,14 @@
     // 键盘导航
     document.addEventListener('keydown', function (e) {
         if (e.key === 'ArrowLeft') {
+            if (document.querySelectorAll('.modal.show').length > 0 || document.querySelectorAll('.floating-panel').length != document.querySelectorAll('.floating-panel.d-none').length) {
+                return;
+            }
             prevChapter();
         } else if (e.key === 'ArrowRight') {
+            if (document.querySelectorAll('.modal.show').length > 0 || document.querySelectorAll('.floating-panel').length != document.querySelectorAll('.floating-panel.d-none').length) {
+                return;
+            }
             nextChapter();
         } else if (e.key === 'Escape') {
             // ESC键关闭所有面板
@@ -685,12 +608,7 @@
         }
 
         hideAllPanels();
-        const panel = document.getElementById('templatesPanel');
-        panel.classList.toggle('d-none');
-        if (!panel.classList.contains('d-none')) {
-            createTemplateFromSelection();
-            loadUserTemplates();
-        }
+        createTemplateFromSelection();
     }
 
     function toggleRewrite() {
@@ -727,7 +645,6 @@
     }
 
     function hideAllPanels() {
-        document.getElementById('templatesPanel').classList.add('d-none');
         document.getElementById('rewritePanel').classList.add('d-none');
         document.getElementById('sensitiveWordsPanel').classList.add('d-none');
 
@@ -1117,7 +1034,7 @@
                         saveExcerpt();
                         break;
                     case 'template':
-                        tooltipTemplateClicked();
+                        toggleTemplates();
                         break;
                     case 'rewrite':
                         toggleRewrite();
@@ -1317,7 +1234,7 @@
 
     // 点击外部关闭面板
     document.addEventListener('click', function (e) {
-        const panels = ['templatesPanel', 'rewritePanel', 'sensitiveWordsPanel'];
+        const panels = ['rewritePanel', 'sensitiveWordsPanel'];
         const toolbar = document.querySelector('.reader-toolbar');
 
         if (!toolbar.contains(e.target)) {
@@ -1331,7 +1248,7 @@
     });
 
     // 定期保存阅读进度（智能检查，避免无意义的保存）
-    setInterval(saveReadingProgress, 30000); // 每30秒保存一次，但只在有变化时保存
+    setInterval(saveReadingProgress, 10000); // 每10秒保存一次，但只在有变化时保存
     setInterval(showProgressOnNavigation, 300); // 每300毫秒更新进度条
 
     // 页面卸载时强制保存进度
@@ -1341,525 +1258,15 @@
 
     // ==================== 模板功能 ====================
 
-    let currentKeywords = [];
-    let userTemplates = [];
-
     function createTemplateFromSelection() {
         const selection = window.getSelection();
         const selectedText = selection.toString().trim();
 
         if (!selectedText) {
+            showTemplateForm();
             return;
         }
-
-        currentSelectedText = selectedText;
-        showCurrentSelectedTemplateForm();
-    }
-
-    function editTemplate(templateId) {
-        const template = userTemplates.find(t => t.id === templateId);
-        if (template) {
-            currentSelectedText = template.content;
-            document.getElementById('createTemplateForm').classList.remove('d-none');
-            document.getElementById('templateName').value = template.name;
-            document.getElementById('templateContent').value = template.content;
-            let keywords = {};
-            template.keywords.forEach(k => {
-                keywords[k] = `{${k}}`;
-            });
-            displayKeywordsList(keywords, true);
-            let html = '';
-            template.tags.forEach(tag => {
-                html += `
-                    <div class="d-flex align-items-center mb-2">
-                        <input type="checkbox" class="form-check-input me-2" value="${tag}" checked>
-                        <label class="form-check-label me-2">${tag}</label>
-                    </div>
-                `;
-            });
-            const container = document.getElementById('tagsList');
-            container.innerHTML = html;
-            document.getElementById('templateDescription').value = template.description;
-            document.getElementById('createTemplateForm').templateId = template.id;
-        }
-    }
-
-    function showCurrentSelectedTemplateForm() {
-        document.getElementById('templateContent').value = currentSelectedText;
-        document.getElementById('createTemplateForm').classList.remove('d-none');
-        // 自动提取关键词
-        extractKeywords();
-        document.getElementById('tagsList').innerHTML = '';
-        document.getElementById('templateTagInput').value = '';
-    }
-
-    async function extractKeywords() {
-        const content = document.getElementById('templateContent').value.trim();
-        if (!content) return;
-
-        // 综合姓氏列表（单姓 + 复姓）
-        const surnames = new Set([
-            '李', '王', '张', '刘', '陈', '杨', '赵', '黄', '周', '吴',
-            '徐', '孙', '胡', '朱', '高', '林', '何', '郭', '马', '罗',
-            '梁', '宋', '郑', '谢', '韩', '唐', '冯', '于', '董', '萧',
-            '程', '曹', '袁', '邓', '许', '傅', '沈', '曾', '彭', '吕',
-            '苏', '卢', '蒋', '蔡', '贾', '丁', '魏', '薛', '叶', '阎',
-            '余', '潘', '杜', '戴', '夏', '钟', '汪', '田', '任', '姜',
-            '范', '方', '石', '姚', '谭', '廖', '邹', '熊', '金', '陆',
-            '郝', '孔', '白', '崔', '康', '毛', '邱', '秦', '江', '史',
-            '顾', '侯', '邵', '孟', '龙', '万', '段', '雷', '钱', '汤',
-            '尹', '黎', '易', '常', '武', '乔', '贺', '赖', '龚', '文',
-            '欧阳', '司马', '上官', '司徒', '诸葛', '夏侯', '东方', '南宫'
-        ]);
-
-        function isChineseCharacters(str) {
-            return /^[\u4e00-\u9fa5]+$/.test(str);
-        }
-
-        const names = new Set();
-        const cleanContent = content.replace(/[\s\.,，。!！?？;；:：、（）()《》""''"“”]/g, '');
-
-        // 预定义一些常见的非名字词语，用于过滤误识别
-        const commonWords = new Set(['今天', '明天', '昨天', '我们', '你们', '他们', '这个', '那个', '这里', '那里']);
-        const noendings = new Set([
-            '的', '了', '在', '是', '有', '和', '就', '都', '被', '从', '以', '为', '上', '要', '出', '一', '这',
-            '那', '他', '她', '它', '我', '你', '们', '什', '么', '怎', '样', '哪', '候', '地', '个', '说', '话',
-            '看', '见', '听', '到', '想', '着', '了', '吗', '呢', '吧', '啊', '呀', '哦', '嗯', '与', '哼', '嘿',
-            '嘻', '哈', '呵', '嘿', '咦', '哇', '哎', '唉', '哟', '喂', '喔', '噢', '嗨', '咳', '咯', '嗯', '唔',
-            '嗷', '哼', '哦', '啊', '呀', '哎', '唉', '哟', '喂', '喔', '噢', '嗨', '咳', '咯', '嗯', '唔', '嗷']);
-
-        for (let i = 0; i < cleanContent.length; i++) {
-            // 检查所有可能的2-4字符组合
-            for (let len = 2; len <= 4 && i + len <= cleanContent.length; len++) {
-                const candidate = cleanContent.substring(i, i + len);
-
-                // 基本验证：全中文且不在常见词语列表中
-                if (!isChineseCharacters(candidate) || commonWords.has(candidate) || noendings.has(candidate[len - 1])) {
-                    continue;
-                }
-
-                let isValidName = false;
-
-                if (len === 2) {
-                    // 2字符：单姓+单名
-                    const surname = candidate[0];
-                    if (surnames.has(surname)) {
-                        isValidName = true;
-                    }
-                } else if (len === 3) {
-                    // 3字符：可能是单姓+双名 或 复姓+单名
-                    const singleSurname = candidate[0];
-                    const compoundSurname = candidate.substring(0, 2);
-
-                    if (surnames.has(singleSurname) || surnames.has(compoundSurname)) {
-                        isValidName = true;
-                    }
-                } else if (len === 4) {
-                    // 4字符：复姓+双名
-                    const compoundSurname = candidate.substring(0, 2);
-                    if (surnames.has(compoundSurname)) {
-                        isValidName = true;
-                    }
-                }
-                if (isValidName) {
-                    names.add(candidate);
-                }
-            }
-        }
-        let suggested_keywords = {};
-        let index = 1;
-        if (content.includes('我')) {
-            suggested_keywords['man1'] = '我';
-            index += 1;
-        }
-        names.forEach(name => {
-            suggested_keywords['man' + index] = name;
-            index += 1;
-        })
-        displayKeywordsList(suggested_keywords);
-    }
-
-    function displayKeywordsList(suggestedKeywords, checked = false) {
-        const container = document.getElementById('keywordsList');
-        currentKeywords = [];
-
-        let html = '';
-        Object.entries(suggestedKeywords).forEach(([key, value]) => {
-            html += `
-                <div class="d-flex align-items-center mb-2">
-                    <input type="checkbox" class="form-check-input me-2" id="keyword_${key}" ${checked ? 'checked' : ''}
-                           onchange="toggleKeyword('${key}', '${value}')">
-                    <label class="form-check-label me-2" for="keyword_${key}">${key}:</label>
-                    <span class="text-primary">${value}</span>
-                </div>
-            `;
-            if (checked) {
-                currentKeywords.push(key);
-            }
-        });
-
-        container.innerHTML = html;
-    }
-
-    function toggleKeyword(key, value) {
-        const checkbox = document.getElementById(`keyword_${key}`);
-        const content = document.getElementById('templateContent');
-
-        if (checkbox.checked) {
-            // 添加关键词
-            if (!currentKeywords.includes(key)) {
-                currentKeywords.push(key);
-            }
-            // 替换内容中的文本为模板变量
-            content.value = content.value.replace(new RegExp(value, 'g'), `{${key}}`);
-        } else {
-            // 移除关键词
-            currentKeywords = currentKeywords.filter(k => k !== key);
-            // 恢复原文本
-            content.value = content.value.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
-        }
-    }
-
-    function addCustomKeyword() {
-        const key = document.getElementById('customKeyword').value.trim();
-        const value = document.getElementById('customKeywordValue').value.trim();
-        if (!value || !key) {
-            showAlert('请输入关键词和文本', 'warning');
-            return;
-        }
-
-        if (currentKeywords.includes(key)) {
-            showAlert('关键词已存在', 'warning');
-            return;
-        }
-
-        const content = document.getElementById('templateContent');
-        if (content.value.includes(value)) {
-            currentKeywords.push(key);
-            content.value = content.value.replace(new RegExp(value, 'g'), `{${key}}`);
-
-            // 更新显示
-            const container = document.getElementById('keywordsList');
-            const kwditem = document.createElement('div');
-            kwditem.classList.add('d-flex', 'align-items-center', 'mb-2');
-            kwditem.innerHTML = `
-                <input type="checkbox" class="form-check-input me-2" checked 
-                       onchange="toggleKeyword('${key}', '${value}')">
-                <label class="form-check-label me-2">${key}:</label>
-                <span class="text-primary">${value}</span>
-            `;
-            container.appendChild(kwditem);
-            document.getElementById('customKeywordValue').value = '';
-        } else {
-            showAlert('在模板内容中未找到指定文本', 'warning');
-        }
-    }
-
-    function updateTagsList() {
-        const tag = document.getElementById('templateTagInput').value.trim();
-        const container = document.getElementById('tagsList');
-        container.innerHTML += `
-            <div class="d-flex align-items-center mb-2">
-                <input type="checkbox" class="form-check-input me-2" value="${tag}" checked>
-                <label class="form-check-label me-2">${tag}</label>
-            </div>
-        `;
-        document.getElementById('templateTagInput').value = '';
-    }
-
-    function getCheckedTags() {
-        const container = document.getElementById('tagsList');
-        const tags = [];
-        container.querySelectorAll('input[type="checkbox"]:checked').forEach(checkbox => {
-            tags.push(checkbox.value);
-        })
-        return tags;
-    }
-
-    async function saveTemplate() {
-        const name = document.getElementById('templateName').value.trim();
-        const content = document.getElementById('templateContent').value.trim();
-        const description = document.getElementById('templateDescription').value.trim();
-        const tags = getCheckedTags();
-        const templateId = document.getElementById('createTemplateForm').templateId;
-
-        if (!name || !content) {
-            showAlert('请填写模板名称和内容', 'warning');
-            return;
-        }
-
-        const token = localStorage.getItem('token');
-        if (!token) return;
-
-        try {
-            const response = await fetch(`/api/templates/${templateId ?? ""}`, {
-                method: templateId ? 'PUT' : 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    name: name,
-                    content: content,
-                    keywords: currentKeywords,
-                    tags: tags,
-                    description: description
-                })
-            });
-
-            if (response.ok) {
-                showAlert('模板保存成功', 'success');
-                cancelCreateTemplate();
-                loadUserTemplates();
-            } else {
-                const error = await response.json();
-                showAlert(error.detail || '保存模板失败', 'danger');
-            }
-        } catch (error) {
-            console.error('保存模板失败:', error);
-            showAlert('保存模板失败', 'danger');
-        }
-    }
-
-    function cancelCreateTemplate() {
-        if (document.getElementById('createTemplateForm').templateId) {
-            delete(document.getElementById('createTemplateForm').templateId);
-        }
-        document.getElementById('templateName').value = '';
-        document.getElementById('templateContent').value = '';
-        document.getElementById('templateTagInput').value = '';
-        document.getElementById('templateDescription').value = '';
-        document.getElementById('keywordsList').innerHTML = '';
-        document.getElementById('tagsList').innerHTML = '';
-        currentKeywords = [];
-        hideAllPanels();
-    }
-
-    async function loadUserTemplates() {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-
-        try {
-            const response = await fetch('/api/templates/', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (response.ok) {
-                const templates = await response.json();
-                userTemplates = templates;
-                displayTemplates(templates);
-            }
-        } catch (error) {
-            console.error('加载模板失败:', error);
-        }
-    }
-
-    function displayTemplates(templates) {
-        const container = document.getElementById('templatesList');
-
-        if (templates.length === 0) {
-            container.innerHTML = '<div class="text-center text-muted">暂无模板</div>';
-            return;
-        }
-
-        container.innerHTML = templates.map(template => `
-            <div class="template-item mb-3 p-3 border rounded">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="flex-grow-1">
-                        <div class="btn-group btn-group-sm hover-actions" style="float: right;">
-                            <button class="btn btn-outline-primary" onclick="editTemplate(${template.id})">
-                                编辑
-                            </button>
-                            <button class="btn btn-outline-danger" onclick="deleteTemplate(${template.id})">
-                                删除
-                            </button>
-                        </div>
-                        <h6>${template.name}</h6>
-                        <p class="text-muted small mb-2">${template.description || '无描述'}</p>
-                        <div class="mb-2">
-                            ${template.tags.map(tag => `<span class="badge bg-secondary me-1">${tag}</span>`).join('')}
-                        </div>
-                        <div class="mb-2">
-                            <small class="text-muted">关键词: ${template.keywords.join(', ')}</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    async function useTemplate(templateId) {
-        const template = userTemplates.find(t => t.id === templateId);
-        if (template) {
-            showTemplateApplyDialog(template);
-            return;
-        }
-
-        const token = localStorage.getItem('token');
-        if (!token) return;
-
-        try {
-            const response = await fetch(`/api/templates/${templateId}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (response.ok) {
-                const template = await response.json();
-                showTemplateApplyDialog(template);
-            }
-        } catch (error) {
-            console.error('获取模板失败:', error);
-        }
-    }
-
-    function showTemplateApplyDialog(template) {
-        let html = `
-            <div class="modal fade" id="applyTemplateModal" tabindex="-1">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">应用模板: ${template.name}</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <p class="text-muted">${template.description || ''}</p>
-        `;
-
-        template.keywords.forEach(keyword => {
-            html += `
-                <div class="mb-3">
-                    <label class="form-label">${keyword}</label>
-                    <input type="text" class="form-control" id="keyword_value_${keyword}" placeholder="输入${keyword}的值">
-                </div>
-            `;
-        });
-
-        html += `
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                            <button type="button" class="btn btn-primary" onclick="applyTemplate(${template.id})">应用</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // 移除现有模态框
-        const existingModal = document.getElementById('applyTemplateModal');
-        if (existingModal) {
-            existingModal.remove();
-        }
-
-        document.body.insertAdjacentHTML('beforeend', html);
-        const modal = new bootstrap.Modal(document.getElementById('applyTemplateModal'));
-        modal.show();
-    }
-
-    async function applyTemplate(templateId) {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-
-        // 收集关键词值
-        const keywordValues = {};
-        const inputs = document.querySelectorAll('[id^="keyword_value_"]');
-
-        for (const input of inputs) {
-            const keyword = input.id.replace('keyword_value_', '');
-            const value = input.value.trim();
-            if (!value) {
-                showAlert(`请填写${keyword}的值`, 'warning');
-                return;
-            }
-            keywordValues[keyword] = value;
-        }
-        // """应用模板"""
-        // template = db.query(Template).filter(
-        //     Template.id == apply_data.template_id,
-        //     Template.user_id == current_user.id
-        // ).first()
-
-        // if not template:
-        //     raise HTTPException(status_code=404, detail="模板不存在")
-
-        // # 解析关键词
-        // keywords = json.loads(template.keywords)
-
-        // # 检查是否提供了所有必需的关键词值
-        // for keyword in keywords:
-        //     if keyword not in apply_data.keyword_values:
-        //         raise HTTPException(
-        //             status_code=400,
-        //             detail=f"缺少关键词值: {keyword}"
-        //         )
-
-        // # 应用模板
-        // result_content = template.content
-        // for keyword, value in apply_data.keyword_values.items():
-        //     result_content = result_content.replace(f"{keyword}", value)
-
-        // return {
-        //     "content": result_content,
-        //     "template_name": template.name
-        // }
-
-        try {
-            const response = await fetch('/api/templates/apply', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    template_id: templateId,
-                    keyword_values: keywordValues
-                })
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-
-                // 将结果插入到重写面板
-                document.getElementById('rewrittenContent').value = result.content;
-
-                // 关闭模态框
-                const modal = bootstrap.Modal.getInstance(document.getElementById('applyTemplateModal'));
-                modal.hide();
-
-                showAlert('模板应用成功', 'success');
-            }
-        } catch (error) {
-            console.error('应用模板失败:', error);
-            showAlert('应用模板失败', 'danger');
-        }
-    }
-
-    async function deleteTemplate(templateId) {
-        if (!confirm('确定要删除这个模板吗？')) return;
-
-        const token = localStorage.getItem('token');
-        if (!token) return;
-
-        try {
-            const response = await fetch(`/api/templates/${templateId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (response.ok) {
-                showAlert('模板删除成功', 'success');
-                loadUserTemplates();
-            }
-        } catch (error) {
-            console.error('删除模板失败:', error);
-            showAlert('删除模板失败', 'danger');
-        }
+        showCreateTemplateForm(selectedText);
     }
 
     // ==================== 重写功能 ====================
@@ -1918,8 +1325,8 @@
     }
 
     async function loadTemplatesForRewrite() {
-        if (userTemplates.length === 0) {
-            await loadUserTemplates();
+        if (allTemplates.length === 0) {
+            await loadTemplates();
         }
         updateTagFilters();
         updateTemplateSelect();
@@ -1928,7 +1335,7 @@
     // 更新标签过滤器
     function updateTagFilters() {
         const allTags = new Set();
-        userTemplates.forEach(template => {
+        allTemplates.forEach(template => {
             if (template.tags && Array.isArray(template.tags)) {
                 template.tags.forEach(tag => allTags.add(tag));
             }
@@ -1979,9 +1386,9 @@
         const select = document.getElementById('templateSelect');
 
         // 过滤模板
-        let filteredTemplates = userTemplates;
+        let filteredTemplates = allTemplates;
         if (selectedTags.length > 0) {
-            filteredTemplates = userTemplates.filter(template => {
+            filteredTemplates = allTemplates.filter(template => {
                 if (!template.tags || !Array.isArray(template.tags)) return false;
                 return selectedTags.every(tag => template.tags.includes(tag));
             });
@@ -2005,7 +1412,7 @@
             return;
         }
 
-        const currentSelectedTemplate = userTemplates.find(t => t.id === parseInt(templateId));
+        const currentSelectedTemplate = allTemplates.find(t => t.id === parseInt(templateId));
 
         if (!currentSelectedTemplate) return;
 
@@ -2039,7 +1446,7 @@
             return;
         }
 
-        const currentSelectedTemplate = userTemplates.find(t => t.id === parseInt(templateId));
+        const currentSelectedTemplate = allTemplates.find(t => t.id === parseInt(templateId));
         if (!currentSelectedTemplate) {
             showAlert('请先选择模板', 'warning');
             return;
@@ -2149,18 +1556,6 @@
     }
 
     // ==================== 工具提示相关函数 ====================
-
-    function tooltipTemplateClicked(e) {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            showAlert('模板功能需要登录后使用', 'warning');
-            return;
-        }
-
-        // 打开模板面板并填充选中的文本
-        cancelCreateTemplate();
-        toggleTemplates();
-    }
 
     function tooltipSensitiveClicked() {
         // 打开敏感词面板

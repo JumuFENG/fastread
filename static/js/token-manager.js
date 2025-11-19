@@ -129,9 +129,7 @@ function handleTokenExpired() {
         localStorage.setItem('return_url', returnUrl);
         
         // 显示提示信息
-        if (typeof showAlert === 'function') {
-            showAlert('登录已过期，请重新登录', 'warning');
-        }
+        showAlert('登录已过期，请重新登录', 'warning');
         
         // 延迟跳转，让用户看到提示
         setTimeout(() => {
@@ -176,9 +174,7 @@ function formatTokenExpiration() {
 // 手动刷新token（供用户主动调用）
 async function manualRefreshToken() {
     if (isTokenExpired()) {
-        if (typeof showAlert === 'function') {
-            showAlert('Token已过期，请重新登录', 'danger');
-        }
+        showAlert('Token已过期，请重新登录', 'danger');
         handleTokenExpired();
         return false;
     }
@@ -186,14 +182,10 @@ async function manualRefreshToken() {
     const refreshed = await refreshToken();
     
     if (refreshed) {
-        if (typeof showAlert === 'function') {
-            showAlert('Token已刷新', 'success');
-        }
+        showAlert('Token已刷新', 'success');
         return true;
     } else {
-        if (typeof showAlert === 'function') {
-            showAlert('Token刷新失败', 'danger');
-        }
+        showAlert('Token刷新失败', 'danger');
         return false;
     }
 }

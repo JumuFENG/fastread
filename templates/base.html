@@ -12,7 +12,7 @@
 </head>
 
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
             <a class="navbar-brand" href="/">
                 <i class="bi bi-book"></i> FastRead
@@ -71,7 +71,7 @@
         </div>
     </nav>
 
-    <main class="container mt-4">
+    <main class="container mt-5 pt-3">
         {% block content %}{% endblock %}
     </main>
 
@@ -337,6 +337,8 @@
             </div>
         </div>
     </div>
+
+    {% block modals %} {% endblock %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/static/js/token-manager.js"></script>
