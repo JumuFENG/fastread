@@ -374,11 +374,13 @@
 
             updateChapterProgress();
 
-            if (chapterIndex == readingProgress.current_chapter - 1) {
+            if (readingProgress && chapterIndex == readingProgress.current_chapter - 1) {
                 document.querySelectorAll('.chapter-text p')[readingProgress.reading_position].scrollIntoView();
             } else {
-                // 强制保存阅读进度（章节切换时）
-                saveReadingProgress(true);
+                scrollTo(0, 0);
+                setTimeout(() => {
+                    saveReadingProgress(true);
+                }, 100);
             }
 
             contentDiv.focus();
@@ -475,7 +477,7 @@
     }
 
     async function saveReadingProgress(force = false) {
-        const p1 = Array.from(document.querySelector('.chapter-text').children).findIndex(node => node.getBoundingClientRect().bottom > 0);
+        const p1 = Math.max(0, Array.from(document.querySelector('.chapter-text')?.children ?? []).findIndex(node => node.getBoundingClientRect().bottom > 0));
         const newProgress = {
             current_chapter: currentChapterIndex + 1,
             reading_position: p1

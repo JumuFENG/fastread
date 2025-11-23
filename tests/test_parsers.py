@@ -167,10 +167,23 @@ async def test_jszj():
     # chapter_content = await parser.get_chapter_content(test_chapter_url)
     # print(chapter_content)
 
+async def test_bxwx():
+    parser = get_parser_for_source('bxwx')
+    sr = await parser.search_books('穿越', 0)
+    print(sr, len(sr))
+    test_book_url = 'https://www.hen0.com/book/600859/'
+    # book_info = await parser.get_book_info(test_book_url)
+    # print(book_info)
+    bchapters = await parser.get_chapter_list(test_book_url)
+    print(len(bchapters))
+    # test_chapter_url = 'https://www.hen0.com/book/600859/126781728.html'
+    # chapter_content = await parser.get_chapter_content(test_chapter_url)
+    # print(chapter_content)
+
 if __name__ == "__main__":
-    # asyncio.run(test_network('https://www.xbiquge77.com/72862'))
-    asyncio.run(test_base_parser())
-    # asyncio.run(test_jszj())
+    # asyncio.run(test_network('https://www.hen0.com/book/600859/'))
+    # asyncio.run(test_base_parser())
+    asyncio.run(test_bxwx())
     # asyncio.run(test_dybz())
     # from urllib.parse import urlparse
     # next_sec = 'https://xszj.org/b/413589/c/5786882?page=2'

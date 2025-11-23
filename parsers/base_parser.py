@@ -411,6 +411,9 @@ class BaseBookSourceParser(ABC):
             return self.chapter_list_page_url_fmt.format(book_url=book_url.rstrip(self.chapter_list_page_url_skip_endding), page=page)
         return book_url
 
+    def build_chapter_next_section_url(self, chapter_url: str, next_sec: str) -> Optional[str]:
+        return self.build_full_url(next_sec, chapter_url)
+
     def get_chapter_next_section(self, soup: BeautifulSoup, chapter_url: str, chapter_sec: str) -> Optional[str]:
         """获取章节的下一部分链接，默认不支持多部分章节"""
         if not self.next_section_selector:
@@ -418,7 +421,7 @@ class BaseBookSourceParser(ABC):
 
         next_ele = soup.select_one(self.next_section_selector)
         if next_ele:
-            next_sec = self.build_full_url(next_ele.get('href'), chapter_url)
+            next_sec = self.build_chapter_next_section_url(chapter_url, next_ele.get('href'))
             if self.next_section_match(next_sec, chapter_sec):
                 return next_sec
         return None
@@ -697,6 +700,10 @@ class BaseBookSourceParser(ABC):
         if any(keyword in title.lower() or keyword in href.lower() for keyword in skip_keywords):
             return False
 
+        keep_keywords = ['引言']
+        if any(keyword in title.lower() or keyword in href.lower() for keyword in keep_keywords):
+            return True
+
         return False
 
     def build_full_url(self, url: str, base_url: str) -> str:
@@ -756,6 +763,9 @@ class BaseBookSourceParser(ABC):
                 text = element.get_text()
                 paragraphs = [text.strip()] if text.strip() else []
 
+        return self.join_paragraphs(paragraphs)
+
+    def join_paragraphs(self, paragraphs):
         joined_paragraphs = []
         joined_text = ''
         for para in paragraphs:
