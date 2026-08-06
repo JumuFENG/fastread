@@ -4,6 +4,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 import uvicorn
 from app.database import engine, Base
+from app.lofig import Config
 from app.routers import books, reading, sources, excerpts, rewrites, sensitive_words
 from app.routers import templates as rtemplates
 
@@ -49,4 +50,4 @@ async def read_book(request: Request, book_id: int):
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8777)
+    uvicorn.run(app, host="0.0.0.0", port=Config.client_config().get("port", 8777))

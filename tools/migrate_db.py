@@ -10,6 +10,7 @@ import sqlite3
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from app.database import *
 from app.database import DB_PATH
+from app.lofig import logger
 from sqlalchemy import text
 
 def migrate_database():
@@ -95,7 +96,7 @@ def migrate_database():
         print("单用户模式迁移完成！")
         
     except Exception as e:
-        print(f"迁移失败: {e}")
+        logger.error(f"迁移失败: {e}")
         conn.rollback()
     finally:
         conn.close()
@@ -119,7 +120,7 @@ def check_database_schema():
                 print(f"  {column[1]} {column[2]} {'NOT NULL' if column[3] else 'NULL'} {'DEFAULT ' + str(column[4]) if column[4] else ''}")
             
     except Exception as e:
-        print(f"检查失败: {e}")
+        logger.error(f"检查失败: {e}")
     finally:
         conn.close()
 

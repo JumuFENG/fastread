@@ -10,6 +10,7 @@ import json
 from typing import Dict, Type, Optional, List
 from .base_parser import BaseBookSourceParser
 from urllib.parse import urlparse
+from app.lofig import logger
 
 
 class ParserLoader:
@@ -30,7 +31,7 @@ class ParserLoader:
 
         # 检查sources目录是否存在
         if not os.path.exists(sources_dir):
-            print("sources目录不存在，跳过扩展解析器加载")
+            logger.warning("sources目录不存在，跳过扩展解析器加载")
             self._loaded = True
             return
 
@@ -50,20 +51,20 @@ class ParserLoader:
                             obj != BaseBookSourceParser):
                             p = obj()
                             self._parsers.append(p)
-                            print(f"加载扩展解析器: {p.get_parser_name()} -> {obj.__name__}")
+                            logger.info(f"加载扩展解析器: {p.get_parser_name()} -> {obj.__name__}")
 
                 except Exception as e:
-                    print(f"加载扩展解析器模块 {module_name} 失败: {e}")
+                    logger.warning(f"加载扩展解析器模块 {module_name} 失败: {e}")
 
         if os.path.isfile(os.path.join(sources_dir, 'sources.json')):
-            print("加载sources/sources.json")
+            logger.info("加载sources/sources.json")
             with open(os.path.join(sources_dir, 'sources.json'), 'r', encoding='utf-8') as f:
                 sources = json.load(f)
             for source_config in sources:
                 self.create_base_parser(source_config, save=False)
 
         self._loaded = True
-        print(f"共加载 {len(self._parsers)} 个扩展解析器")
+        logger.info(f"共加载 {len(self._parsers)} 个扩展解析器")
 
     def get_parser(self, source_name: str) -> BaseBookSourceParser:
         """
@@ -82,7 +83,7 @@ class ParserLoader:
         parser_key = source_name.lower().replace(' ', '').replace('-', '').replace('_', '')
         for parser in self._parsers:
             if parser_key in parser.get_parser_name():
-                print(f"使用解析器: {parser.__class__.__name__} for {source_name}")
+                logger.debug(f"使用解析器: {parser.__class__.__name__} for {source_name}")
                 return parser
 
     def create_base_parser(self, source_config: dict, save=True) -> BaseBookSourceParser:
@@ -111,7 +112,7 @@ class ParserLoader:
             with open(jpath, 'w', encoding='utf-8') as f:
                 json.dump(existing_sources, f, ensure_ascii=False, indent=4)
         self._parsers.append(parser)
-        print(f"加载解析器: {parser.get_parser_name()} -> {BaseBookSourceParser.__name__}")
+        logger.info(f"加载解析器: {parser.get_parser_name()} -> {BaseBookSourceParser.__name__}")
         return parser
     
     def delete_base_parser(self, source_id: str) -> None:
@@ -143,7 +144,7 @@ class ParserLoader:
                     break
             with open(jpath, 'w', encoding='utf-8') as f:
                 json.dump(sources, f, ensure_ascii=False, indent=4)
-            print(f"删除解析器: {parser.get_parser_name()} -> {BaseBookSourceParser.__name__}")
+            logger.info(f"删除解析器: {parser.get_parser_name()} -> {BaseBookSourceParser.__name__}")
             break
 
     def get_parser_for_url(self, url: str) -> BaseBookSourceParser:

@@ -11,6 +11,7 @@ from urllib.parse import urljoin, urlparse
 import re
 import copy
 from glom import glom
+from app.lofig import logger
 
 
 class SearchResult:
@@ -236,7 +237,7 @@ class BaseBookSourceParser(ABC):
                 return books
 
         except Exception as e:
-            print(f"搜索失败: {str(e)}")
+            logger.error(f"搜索失败: {str(e)}")
             return []
 
     async def get_book_info(self, book_url: str) -> Optional[BookInfo]:
@@ -258,7 +259,7 @@ class BaseBookSourceParser(ABC):
                 return await self.parse_book_info(soup, book_url)
 
         except Exception as e:
-            print(f"获取书籍信息失败: {str(e)}")
+            logger.error(f"获取书籍信息失败: {str(e)}")
             return None
 
     async def get_chapter_list(self, book_url: str) -> List[ChapterInfo]:
@@ -285,7 +286,7 @@ class BaseBookSourceParser(ABC):
                     next_page = self.get_next_chapter_list_page(soup, book_url)
                 return chapters
         except Exception as e:
-            print(f"获取章节列表失败: {str(e)}")
+            logger.error(f"获取章节列表失败: {str(e)}")
             return []
 
     async def update_chapter_list(self, book_url: str, existing_chapter_count: int) -> List[ChapterInfo]:
@@ -318,7 +319,7 @@ class BaseBookSourceParser(ABC):
                     next_page = self.get_next_chapter_list_page(soup, book_url)
                 return [c for c in chapters if c.chapter_number > existing_chapter_count]
         except Exception as e:
-            print(f"更新章节列表失败: {str(e)}")
+            logger.error(f"更新章节列表失败: {str(e)}")
             return []
 
     async def get_chapter_content(self, chapter_url: str) -> Optional[str]:
@@ -346,7 +347,7 @@ class BaseBookSourceParser(ABC):
                 return content
 
         except Exception as e:
-            print(f"获取章节内容失败: {str(e)}")
+            logger.error(f"获取章节内容失败: {str(e)}")
             return None
 
     def next_section_match(self, next_sec, cur_sec):
@@ -465,7 +466,7 @@ class BaseBookSourceParser(ABC):
                         cover_url=cover_url
                     ))
             except Exception as e:
-                print(f"解析搜索结果项失败: {e}")
+                logger.error(f"解析搜索结果项失败: {e}")
                 continue
 
         return results
@@ -488,7 +489,7 @@ class BaseBookSourceParser(ABC):
                 cover_url=cover_url
             )
         except Exception as e:
-            print(f"解析书籍信息失败: {e}")
+            logger.error(f"解析书籍信息失败: {e}")
             return None
 
     def convert_chapter_links(self, links: List[BeautifulSoup], start_no: int=1) -> List[ChapterInfo]:
@@ -510,7 +511,7 @@ class BaseBookSourceParser(ABC):
                     chapter_number += 1
 
             except Exception as e:
-                print(f"解析章节链接失败: {e}")
+                logger.error(f"解析章节链接失败: {e}")
                 continue
         return chapters
 

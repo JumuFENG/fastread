@@ -5,6 +5,7 @@ from app.database import get_db, Book, Chapter
 from pydantic import BaseModel
 from datetime import datetime
 from app.parsers.parser_loader import get_parser_for_source, get_parser_for_url
+from app.lofig import logger
 
 router = APIRouter()
 
@@ -167,15 +168,15 @@ async def update_book_chapters(book_id: int, db: Session = Depends(get_db)):
 async def fetch_chapter_content_realtime(chapter: Chapter, db: Session) -> str:
     """实时获取章节内容"""
     try:
-        print(f"开始获取章节内容: {chapter.title} (ID: {chapter.id})")
-        print(f"章节URL: {chapter.source_url}")
+        logger.info(f"开始获取章节内容: {chapter.title} (ID: {chapter.id})")
+        logger.info(f"章节URL: {chapter.source_url}")
 
         # 获取书籍和书源信息
         book = db.query(Book).filter(Book.id == chapter.book_id).first()
         if not book:
             raise Exception("书籍信息不存在")
 
-        print(f"书籍信息: {book.title} (源ID: {book.source_id})")
+        logger.info(f"书籍信息: {book.title} (源ID: {book.source_id})")
 
         parser = get_parser_for_book(book)
         # 使用解析器获取章节内容
@@ -184,7 +185,7 @@ async def fetch_chapter_content_realtime(chapter: Chapter, db: Session) -> str:
         if not content:
             raise Exception("解析器无法提取章节内容")
 
-        print(f"解析器成功提取内容，长度: {len(content)}")
+        logger.info(f"解析器成功提取内容，长度: {len(content)}")
 
         # 可选：缓存内容到数据库（如果需要）
         cache_content = len(content) < 50000  # 只缓存较小的章节

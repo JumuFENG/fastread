@@ -6,8 +6,8 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-# 测试使用独立的数据库文件，避免影响真实数据
-os.environ.setdefault('FASTREAD_DB_PATH', os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data', 'test.db')))
+from app.lofig import Config
+Config.db_config()['dbpath'] = 'data/test.db'
 import asyncio
 from app.database import engine, Base, SessionLocal, Book, Chapter
 from app.routers.books import fetch_chapter_content_realtime

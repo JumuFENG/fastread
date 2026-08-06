@@ -7,6 +7,7 @@ import json
 import httpx
 from app.parsers.parser_loader import BaseBookSourceParser, get_parser_for_source, get_parser_for_url
 from app.parsers.parser_loader import delete_parser, list_available_parsers
+from app.lofig import logger
 
 router = APIRouter()
 
@@ -129,7 +130,7 @@ async def test_book_source(source_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"测试书源失败: {str(e)}")
+        logger.error(f"测试书源失败: {str(e)}")
         return {
             "success": False,
             "message": f"书源测试失败: {str(e)}"
@@ -156,7 +157,7 @@ async def detect_book_source(request: DetectSourceRequest):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"检测书源API错误: {str(e)}")
+        logger.error(f"检测书源API错误: {str(e)}")
         raise HTTPException(status_code=500, detail=f"检测失败: {str(e)}")
 
 class ImportBookRequest(BaseModel):
@@ -193,7 +194,7 @@ async def import_book(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"导入书籍API错误: {str(e)}")
+        logger.error(f"导入书籍API错误: {str(e)}")
         raise HTTPException(status_code=500, detail=f"服务器内部错误: {str(e)}")
 
 async def import_book_task(ibook: ImportBookRequest):
@@ -203,18 +204,18 @@ async def import_book_task(ibook: ImportBookRequest):
 
     try:
         book_url = ibook.book_url
-        print(f"开始导入书籍: {book_url}")
+        logger.info(f"开始导入书籍: {book_url}")
 
         # 获取对应的解析器
         parser = get_parser_for_url(book_url)
 
         # 获取书籍信息
-        print(f"正在获取书籍信息...")
+        logger.info(f"正在获取书籍信息...")
         book_info = await parser.get_book_info(book_url)
         if not book_info:
             raise Exception("无法获取书籍信息")
 
-        print(f"解析到书籍信息: 标题={book_info.title}, 作者={book_info.author}")
+        logger.info(f"解析到书籍信息: 标题={book_info.title}, 作者={book_info.author}")
 
         # 创建书籍记录
         book = Book(
@@ -229,12 +230,12 @@ async def import_book_task(ibook: ImportBookRequest):
         db.commit()
         db.refresh(book)
 
-        print(f"书籍记录创建成功，ID: {book.id}")
+        logger.info(f"书籍记录创建成功，ID: {book.id}")
 
         # 获取章节列表
-        print(f"正在获取章节列表...")
+        logger.info(f"正在获取章节列表...")
         chapter_infos = await parser.get_chapter_list(book_url)
-        print(f"找到 {len(chapter_infos)} 个章节")
+        logger.info(f"找到 {len(chapter_infos)} 个章节")
 
         chapters_added = 0
         for chapter_info in chapter_infos:
@@ -254,10 +255,10 @@ async def import_book_task(ibook: ImportBookRequest):
                 # 每50章提交一次
                 if chapters_added % 50 == 0:
                     db.commit()
-                    print(f"已添加 {chapters_added} 章节...")
+                    logger.info(f"已添加 {chapters_added} 章节...")
 
             except Exception as e:
-                print(f"添加章节失败: {chapter_info.title}, 错误: {e}")
+                logger.warning(f"添加章节失败: {chapter_info.title}, 错误: {e}")
                 continue
 
         # 最终提交
@@ -267,12 +268,10 @@ async def import_book_task(ibook: ImportBookRequest):
         book.total_chapters = chapters_added
         db.commit()
 
-        print(f"书籍导入成功: {book_info.title}, 共 {chapters_added} 章")
+        logger.info(f"书籍导入成功: {book_info.title}, 共 {chapters_added} 章")
 
     except Exception as e:
-        print(f"导入书籍失败: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"导入书籍失败: {str(e)}", exc_info=True)
         db.rollback()
     finally:
         db.close()
