@@ -19,7 +19,7 @@ Legado-like Chinese web novel reader. FastAPI + SQLAlchemy 2 + Jinja2 + vanilla 
 
 - SQLite `data/reader.db` is git-ignored and committed nowhere; it is real local dev data (54MB). Never delete it casually.
 - Tables are created at startup via `Base.metadata.create_all` in `main.py`. Alembic is in requirements but unused; `tools/migrate_db.py` does manual raw-SQLite `ALTER TABLE` to add columns (e.g. `is_cached`, `cached_at`). For schema changes follow that pattern: add column to model + idempotent ALTER in `tools/migrate_db.py`.
-- Chapter content is lazy: `Chapter.content` stays NULL, fetched from the source site on demand and cached only if < 50KB (`app/routers/books.py:190`).
+- Chapter content is lazy: `Chapter.content` stays NULL, fetched from the source site on demand, then fully cached to DB (`app/routers/books.py:190`).
 
 ## Book sources / parsers
 
@@ -30,7 +30,7 @@ Legado-like Chinese web novel reader. FastAPI + SQLAlchemy 2 + Jinja2 + vanilla 
 ## Tests
 
 - NOT pytest and no CI. `tests/` are standalone async scripts that hit live websites: run `python tests/test_parsers.py` (edit `__main__` at the bottom to select which source), `python tests/test_chapter.py`. Tests use a separate `data/test.db` (schema auto-created), never the real `data/reader.db`.
-- The test DB path is set via the `FASTREAD_DB_PATH` env var (honored by `app/database.py`); override it for other environments.
+- The test DB path is set via Config.db_config()['dbpath'] = 'data/test.db' in test script before import database.py.
 - For new parser work, add a `test_*` function there following the existing pattern.
 
 ## Frontend

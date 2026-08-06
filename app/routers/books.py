@@ -187,13 +187,11 @@ async def fetch_chapter_content_realtime(chapter: Chapter, db: Session) -> str:
 
         logger.info(f"解析器成功提取内容，长度: {len(content)}")
 
-        # 可选：缓存内容到数据库（如果需要）
-        cache_content = len(content) < 50000  # 只缓存较小的章节
-        if cache_content:
-            chapter.content = content
-            chapter.is_cached = True
-            chapter.cached_at = datetime.utcnow()
-            db.commit()
+        # 缓存全部章节内容到数据库
+        chapter.content = content
+        chapter.is_cached = True
+        chapter.cached_at = datetime.utcnow()
+        db.commit()
 
         return content
 
