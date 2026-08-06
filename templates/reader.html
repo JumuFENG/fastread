@@ -82,27 +82,57 @@
 
                         <!-- 模板选择区域 -->
                         <div class="mb-3">
-                            <label class="form-label">使用模板（可选）</label>
+                            <!-- 双Tab：模板 / AI创作 -->
+                            <ul class="nav nav-tabs" id="rewriteTabs">
+                                <li class="nav-item">
+                                    <button class="nav-link active" data-tab="template"
+                                        onclick="switchRewriteTab('template')">模板</button>
+                                </li>
+                                <li class="nav-item">
+                                    <button class="nav-link" data-tab="ai"
+                                        onclick="switchRewriteTab('ai')">AI创作</button>
+                                </li>
+                            </ul>
 
-                            <!-- 标签过滤 -->
-                            <div class="mb-2">
-                                <label class="form-label small">按标签过滤：</label>
-                                <div id="tagFilters" class="d-flex flex-wrap gap-1">
-                                    <!-- 标签按钮将动态生成 -->
+                            <!-- 模板Tab -->
+                            <div id="rewriteTemplateTab" class="mt-3">
+                                <label class="form-label small">使用模板（可选）</label>
+
+                                <!-- 标签过滤 -->
+                                <div class="mb-2">
+                                    <label class="form-label small">按标签过滤：</label>
+                                    <div id="tagFilters" class="d-flex flex-wrap gap-1">
+                                        <!-- 标签按钮将动态生成 -->
+                                    </div>
+                                </div>
+
+                                <!-- 模板选择 -->
+                                <select class="form-select" id="templateSelect" onchange="onTemplateSelected()">
+                                    <option value="">选择模板</option>
+                                </select>
+
+                                <!-- 关键词输入区域 -->
+                                <div id="keywordInputs" class="mt-3 d-none">
+                                    <label class="form-label small">填写模板关键词：</label>
+                                    <div id="keywordInputsList" class="d-flex flex-wrap gap-3">
+                                        <!-- 关键词输入框将动态生成 -->
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- 模板选择 -->
-                            <select class="form-select" id="templateSelect" onchange="onTemplateSelected()">
-                                <option value="">选择模板</option>
-                            </select>
-
-                            <!-- 关键词输入区域 -->
-                            <div id="keywordInputs" class="mt-3 d-none">
-                                <label class="form-label small">填写模板关键词：</label>
-                                <div id="keywordInputsList" class="d-flex flex-wrap gap-3">
-                                    <!-- 关键词输入框将动态生成 -->
+                            <!-- AI创作Tab -->
+                            <div id="rewriteAiTab" class="d-none mt-3">
+                                <label class="form-label small">创作要求</label>
+                                <textarea class="form-control" id="aiPrompt" rows="3"
+                                    placeholder="描述要生成或改写的内容，例如：用更生动的语言描写这段夜色"></textarea>
+                                <div class="form-check mt-2">
+                                    <input class="form-check-input" type="checkbox" id="aiUseOriginal" checked>
+                                    <label class="form-check-label small" for="aiUseOriginal">包含原始内容作为上下文</label>
                                 </div>
+                                <button class="btn btn-info btn-sm mt-2" id="aiGenerateBtn" onclick="generateWithAI()">
+                                    <i class="bi bi-magic"></i> AI生成
+                                </button>
+                                <div id="aiStatus" class="small text-muted mt-1"></div>
                             </div>
                         </div>
 
@@ -1383,6 +1413,52 @@
         });
 
         document.getElementById('rewrittenContent').value = content;
+    }
+
+    // 切换模板/AI创作Tab
+    function switchRewriteTab(tab) {
+        document.getElementById('rewriteTemplateTab').classList.toggle('d-none', tab !== 'template');
+        document.getElementById('rewriteAiTab').classList.toggle('d-none', tab !== 'ai');
+        document.querySelectorAll('#rewriteTabs button').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === tab);
+        });
+    }
+
+    // AI生成内容并写入新内容框
+    async function generateWithAI() {
+        const prompt = document.getElementById('aiPrompt').value.trim();
+        if (!prompt) {
+            showAlert('请输入创作要求', 'warning');
+            return;
+        }
+
+        const context = document.getElementById('aiUseOriginal').checked
+            ? document.getElementById('originalContent').value : '';
+        const statusEl = document.getElementById('aiStatus');
+        const btn = document.getElementById('aiGenerateBtn');
+        statusEl.textContent = 'AI生成中，请稍候...';
+        btn.disabled = true;
+
+        try {
+            const response = await fetch('/api/ai/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ prompt, context })
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.detail || 'AI生成失败');
+            }
+            document.getElementById('rewrittenContent').value = data.content;
+            statusEl.textContent = '生成完成，可编辑后点击"应用新内容"';
+        } catch (e) {
+            showAlert(e.message, 'danger');
+            statusEl.textContent = '';
+        } finally {
+            btn.disabled = false;
+        }
     }
 
     function saveRewrite() {

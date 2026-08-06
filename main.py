@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse
 import uvicorn
 from app.database import engine, Base
 from app.lofig import Config
-from app.routers import books, reading, sources, excerpts, rewrites, sensitive_words
+from app.routers import books, reading, sources, excerpts, rewrites, sensitive_words, ai
 from app.routers import templates as rtemplates
 
 # 创建数据库表
@@ -27,6 +27,7 @@ app.include_router(excerpts.router, prefix="/api/excerpts", tags=["摘录管理"
 app.include_router(rtemplates.router, prefix="/api/templates", tags=["模板管理"])
 app.include_router(rewrites.router, prefix="/api/rewrites", tags=["重写功能"])
 app.include_router(sensitive_words.router, prefix="/api/sensitive-words", tags=["敏感词管理"])
+app.include_router(ai.router, prefix="/api/ai", tags=["AI功能"])
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):

@@ -3,6 +3,14 @@
 {% block title %}阅读设置 - FastRead{% endblock %}
 
 {% block content %}
+<!-- 页面头部 -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-gear"></i> 设置</h2>
+    <button class="btn btn-outline-secondary" onclick="history.length > 1 ? history.back() : location.href='/'">
+        <i class="bi bi-x-lg"></i><span class="d-none d-md-inline"> 关闭</span>
+    </button>
+</div>
+
 <!-- 阅读设置面板 -->
 <div id="settingsPanel" class="">
     <h6>阅读设置</h6>
@@ -54,6 +62,33 @@
     </div>
 </div>
 
+<hr>
+
+<!-- AI配置 -->
+<div id="aiSettingsPanel">
+    <h6>AI配置</h6>
+    <div class="row">
+        <div class="col-md-6 mb-2">
+            <label class="form-label">API地址</label>
+            <input type="text" class="form-control form-control-sm" id="aiApiUrl"
+                placeholder="https://api.openai.com/v1/chat/completions" onchange="saveAiConfig()">
+        </div>
+        <div class="col-md-6 mb-2">
+            <label class="form-label">API密钥</label>
+            <input type="password" class="form-control form-control-sm" id="aiApiKey"
+                placeholder="sk-..." onchange="saveAiConfig()">
+        </div>
+        <div class="col-md-6 mb-2">
+            <label class="form-label">模型</label>
+            <input type="text" class="form-control form-control-sm" id="aiModel"
+                placeholder="gpt-4o-mini" onchange="saveAiConfig()">
+        </div>
+        <div class="col-md-6 mb-2 d-flex align-items-center">
+            <small class="text-muted">修改后自动保存，无需手动点击。</small>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -68,9 +103,46 @@
         document.getElementById('lineHeightSlider').value = lineHeight;
         document.getElementById('themeSelect').value = theme;
         document.getElementById('fontSelect').value = font;
-        document.getElementById('autoScrollCheckbox').checked = autoScrollEnabled;
-        document.getElementById('autoScrollSpeed').value = autoScrollSpeed;
+        if (typeof autoScrollEnabled !== 'undefined') {
+            document.getElementById('autoScrollCheckbox').checked = autoScrollEnabled;
+            document.getElementById('autoScrollSpeed').value = autoScrollSpeed;
+        }
+        loadAiConfig();
     })
+
+    // AI配置功能
+    async function loadAiConfig() {
+        try {
+            const response = await fetch('/api/ai/config');
+            const cfg = await response.json();
+            document.getElementById('aiApiUrl').value = cfg.api_url || '';
+            document.getElementById('aiApiKey').value = cfg.api_key || '';
+            document.getElementById('aiModel').value = cfg.model || '';
+        } catch (e) {
+            console.error('加载AI配置失败:', e);
+        }
+    }
+
+    async function saveAiConfig() {
+        const payload = {
+            api_url: document.getElementById('aiApiUrl').value.trim(),
+            api_key: document.getElementById('aiApiKey').value.trim(),
+            model: document.getElementById('aiModel').value.trim()
+        };
+        try {
+            const response = await fetch('/api/ai/config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+            showAlert(data.message || '保存失败', response.ok ? 'success' : 'danger');
+        } catch (e) {
+            showAlert('保存失败，请检查网络连接', 'danger');
+        }
+    }
 
     // 阅读设置功能
     function changeFontSize(size) {

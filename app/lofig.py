@@ -85,6 +85,13 @@ class Config:
         return cfg['database']
 
     @classmethod
+    def ai_config(self):
+        cfg = self.all_configs()
+        if 'ai' not in cfg:
+            cfg['ai'] = {}
+        return cfg['ai']
+
+    @classmethod
     def log_level(self):
         lvl = self.all_configs()['client'].get("log_level", "INFO").upper()
         return logging._nameToLevel[lvl]

@@ -36,3 +36,4 @@ Legado-like Chinese web novel reader. FastAPI + SQLAlchemy 2 + Jinja2 + vanilla 
 ## Frontend
 
 - Recent conventions (respect when touching these): rewrite/creation is fully client-side, nothing saved to server (`static/js/app.js`); templates & excerpts have their own pages; reading progress and sensitive words are server-backed via `/api/reading` and `/api/sensitive-words`.
+- AI creation (reader rewritePanel AI tab, `/api/ai/generate`) is server-backed: AI settings (API URL/key/model) live in `config/config.json` via `Config.ai_config()`, saved from the settings page through `/api/ai/config`; generation is proxied server-side (OpenAI-compatible chat completions).
