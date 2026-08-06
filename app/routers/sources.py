@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List, Union
-from database import get_db, Book, Chapter
+from app.database import get_db, Book, Chapter
 from pydantic import BaseModel
 import json
 import httpx
-from parsers.parser_loader import BaseBookSourceParser, get_parser_for_source, get_parser_for_url
-from parsers.parser_loader import delete_parser, list_available_parsers
+from app.parsers.parser_loader import BaseBookSourceParser, get_parser_for_source, get_parser_for_url
+from app.parsers.parser_loader import delete_parser, list_available_parsers
 
 router = APIRouter()
 
@@ -40,7 +40,7 @@ class SearchResult(BaseModel):
 @router.post("/parsers/reload")
 async def reload_parsers():
     """重新加载所有解析器"""
-    from parsers.parser_loader import parser_loader
+    from app.parsers.parser_loader import parser_loader
     parser_loader.reload_parsers()
     parsers = parser_loader.list_available_parsers()
     return {
@@ -198,7 +198,7 @@ async def import_book(
 
 async def import_book_task(ibook: ImportBookRequest):
     # 创建新的数据库会话，避免会话冲突
-    from database import SessionLocal
+    from app.database import SessionLocal
     db = SessionLocal()
 
     try:

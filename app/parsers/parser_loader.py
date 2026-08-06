@@ -25,7 +25,7 @@ class ParserLoader:
             return
 
         # 获取项目根目录
-        current_dir = os.path.dirname(os.path.dirname(__file__))
+        current_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
         sources_dir = os.path.join(current_dir, 'sources')
 
         # 检查sources目录是否存在
@@ -97,7 +97,7 @@ class ParserLoader:
         """
         parser = BaseBookSourceParser(source_config)
         if save:
-            current_dir = os.path.dirname(os.path.dirname(__file__))
+            current_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
             sources_dir = os.path.join(current_dir, 'sources')
             if not os.path.isdir(sources_dir):
                 os.makedirs(sources_dir)
@@ -128,7 +128,7 @@ class ParserLoader:
             if source_id not in parser.get_parser_name():
                 continue
             self._parsers.remove(parser)
-            current_dir = os.path.dirname(os.path.dirname(__file__))
+            current_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
             sources_dir = os.path.join(current_dir, 'sources')
             if not os.path.isdir(sources_dir):
                 return

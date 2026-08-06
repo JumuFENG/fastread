@@ -2,8 +2,16 @@ from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, B
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
+from pathlib import Path
+import os
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./reader.db"
+# 数据库文件路径解析（相对项目根目录的 data 文件夹，可通过 FASTREAD_DB_PATH 覆盖）
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = BASE_DIR / "data"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+DB_PATH = Path(os.environ.get("FASTREAD_DB_PATH", str(DATA_DIR / "reader.db")))
+
+SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_PATH}"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

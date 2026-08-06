@@ -3,9 +3,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 import uvicorn
-from database import engine, Base
-from routers import books, reading, sources, excerpts, rewrites, sensitive_words
-from routers import templates as rtemplates
+from app.database import engine, Base
+from app.routers import books, reading, sources, excerpts, rewrites, sensitive_words
+from app.routers import templates as rtemplates
 
 # 创建数据库表
 Base.metadata.create_all(bind=engine)

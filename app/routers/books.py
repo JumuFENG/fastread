@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from database import get_db, Book, Chapter
+from app.database import get_db, Book, Chapter
 from pydantic import BaseModel
 from datetime import datetime
-from parsers.parser_loader import get_parser_for_source, get_parser_for_url
+from app.parsers.parser_loader import get_parser_for_source, get_parser_for_url
 
 router = APIRouter()
 

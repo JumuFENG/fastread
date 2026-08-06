@@ -44,18 +44,20 @@ python main.py
 
 ```
 ├── main.py                 # 应用入口
-├── database.py            # 数据库模型和配置
-├── requirements.txt       # Python依赖
-├── routers/              # API路由
-│   ├── auth.py           # 用户认证
-│   ├── books.py          # 书籍管理
-│   ├── reading.py        # 阅读进度
-│   └── sources.py        # 书源管理
-├── templates/            # HTML模板
-│   ├── base.html         # 基础模板
-│   ├── index.html        # 首页
-│   └── reader.html       # 阅读器
-└── static/               # 静态资源
+├── app/                    # 应用核心代码
+│   ├── database.py         # 数据库模型和配置
+│   ├── routers/            # API路由
+│   │   ├── books.py        # 书籍管理
+│   │   ├── reading.py      # 阅读进度
+│   │   └── sources.py      # 书源管理
+│   └── parsers/            # 书源解析器
+├── data/                   # 本地数据（含 reader.db）
+├── tools/                  # 工具脚本（如 migrate_db.py）
+├── templates/              # HTML模板
+│   ├── base.html           # 基础模板
+│   ├── index.html          # 首页
+│   └── reader.html         # 阅读器
+└── static/                 # 静态资源
     ├── css/
     ├── js/
     └── images/

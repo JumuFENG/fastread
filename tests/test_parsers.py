@@ -6,7 +6,7 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import asyncio
-from parsers.parser_loader import parser_loader, get_parser_for_source, get_parser_for_url
+from app.parsers.parser_loader import parser_loader, get_parser_for_source, get_parser_for_url
 
 async def test_network(url):
     parser = parser_loader.create_base_parser({'name': 'test', 'url': url}, False)

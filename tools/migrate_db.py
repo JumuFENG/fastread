@@ -4,8 +4,12 @@
 添加新的字段到现有数据库
 """
 
+import os
+import sys
 import sqlite3
-from database import *
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from app.database import *
+from app.database import DB_PATH
 from sqlalchemy import text
 
 def migrate_database():
@@ -15,7 +19,7 @@ def migrate_database():
     Base.metadata.create_all(bind=engine)
     
     # 连接到SQLite数据库
-    conn = sqlite3.connect('reader.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
     try:
@@ -98,7 +102,7 @@ def migrate_database():
 
 def check_database_schema():
     """检查数据库结构"""
-    conn = sqlite3.connect('reader.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
     try:
@@ -121,7 +125,7 @@ def check_database_schema():
 
 def delete_table(name):
     """删除表"""
-    conn = sqlite3.connect('reader.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute(f"DROP TABLE IF EXISTS {name}")
     conn.commit()
@@ -129,7 +133,7 @@ def delete_table(name):
 
 def recreate_table(name):
     """重新创建表"""
-    conn = sqlite3.connect('reader.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     if not cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{name}'").fetchone():
         return

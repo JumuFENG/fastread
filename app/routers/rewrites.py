@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from database import get_db, Rewrite, Book, Chapter
+from app.database import get_db, Rewrite, Book, Chapter
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime

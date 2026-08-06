@@ -62,6 +62,9 @@ db.sqlite3
 db.sqlite3-journal
 *.db
 
+# 本地数据目录（含 reader.db）
+data/
+
 # Flask stuff:
 instance/
 .webassets-cache
@@ -210,3 +213,4 @@ __marimo__/
 # 保留sources文件夹结构但忽略具体实现
 sources/*
 !sources/.gitkeep
+draft/
