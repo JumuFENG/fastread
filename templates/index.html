@@ -162,7 +162,6 @@
             if (response.ok) {
                 showAlert('书籍删除成功', 'success');
                 loadBooks();
-                deleteLocalBookStorage(bookId);
             } else {
                 showAlert('删除失败', 'danger');
             }
@@ -170,12 +169,6 @@
             console.error('删除书籍失败:', error);
             showAlert('删除失败', 'danger');
         }
-    }
-
-    function deleteLocalBookStorage(bookId) {
-        let localReadingProgress = JSON.parse(localStorage.getItem('localReadingProgress'))??{};
-        delete localReadingProgress[bookId];
-        localStorage.setItem('localReadingProgress', JSON.stringify(localReadingProgress));
     }
 
     function searchLocalBooks() {

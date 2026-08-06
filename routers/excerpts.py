@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from database import get_db, Excerpt, User
-from routers.auth import get_current_user
+from database import get_db, Excerpt
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
@@ -32,12 +31,10 @@ class ExcerptUpdate(BaseModel):
 @router.post("/", response_model=ExcerptResponse)
 async def create_excerpt(
     excerpt: ExcerptCreate,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """创建摘录"""
     db_excerpt = Excerpt(
-        user_id=current_user.id,
         book_id=excerpt.book_id,
         chapter_id=excerpt.chapter_id,
         content=excerpt.content,
@@ -53,11 +50,10 @@ async def create_excerpt(
 @router.get("/", response_model=List[ExcerptResponse])
 async def get_excerpts(
     book_id: Optional[int] = None,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """获取用户的摘录列表"""
-    query = db.query(Excerpt).filter(Excerpt.user_id == current_user.id)
+    """获取摘录列表"""
+    query = db.query(Excerpt)
     
     if book_id:
         query = query.filter(Excerpt.book_id == book_id)
@@ -68,13 +64,11 @@ async def get_excerpts(
 @router.get("/{excerpt_id}", response_model=ExcerptResponse)
 async def get_excerpt(
     excerpt_id: int,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """获取单个摘录"""
     excerpt = db.query(Excerpt).filter(
-        Excerpt.id == excerpt_id,
-        Excerpt.user_id == current_user.id
+        Excerpt.id == excerpt_id
     ).first()
     
     if not excerpt:
@@ -86,13 +80,11 @@ async def get_excerpt(
 async def update_excerpt(
     excerpt_id: int,
     excerpt_update: ExcerptUpdate,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """更新摘录"""
     excerpt = db.query(Excerpt).filter(
-        Excerpt.id == excerpt_id,
-        Excerpt.user_id == current_user.id
+        Excerpt.id == excerpt_id
     ).first()
     
     if not excerpt:
@@ -111,13 +103,11 @@ async def update_excerpt(
 @router.delete("/{excerpt_id}")
 async def delete_excerpt(
     excerpt_id: int,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """删除摘录"""
     excerpt = db.query(Excerpt).filter(
-        Excerpt.id == excerpt_id,
-        Excerpt.user_id == current_user.id
+        Excerpt.id == excerpt_id
     ).first()
     
     if not excerpt:

@@ -435,26 +435,7 @@
     async function loadReadingProgress(bookId) {
         currentChapterIndex = 0;
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                let localReadingProgress = JSON.parse(localStorage.getItem('localReadingProgress'));
-                if (localReadingProgress && localReadingProgress[bookId]) {
-                    readingProgress = localReadingProgress[bookId];
-                    currentChapterIndex = readingProgress.current_chapter - 1;
-                    // 初始化上次保存的进度
-                    lastSavedProgress = { ...readingProgress };
-                    console.log('加载本地阅读进度，从第', currentChapterIndex + 1, '章开始');
-                }
-                loadChapter(currentChapterIndex);
-                preloadChapter(currentChapterIndex + 1);
-                return;
-            }
-
-            const response = await fetch(`/api/reading/progress/${bookId}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            const response = await fetch(`/api/reading/progress/${bookId}`);
 
             if (response.ok) {
                 readingProgress = await response.json();
@@ -470,7 +451,7 @@
             }
         } catch (error) {
             console.error('加载阅读进度失败:', error);
-            // 如果没有登录或加载失败，默认从第一章开始
+            // 加载失败，默认从第一章开始
             console.log('异常情况，从第一章开始');
             loadChapter(currentChapterIndex);
         }
@@ -492,24 +473,11 @@
 
         readingProgress = newProgress;
 
-        const token = localStorage.getItem('token');
-        if (!token) {
-            let localReadingProgress = JSON.parse(localStorage.getItem('localReadingProgress')) ?? {};
-            localReadingProgress[currentBook.id] = readingProgress;
-            localStorage.setItem('localReadingProgress', JSON.stringify(localReadingProgress));
-
-            // 更新上次保存的进度
-            lastSavedProgress = { ...readingProgress };
-            console.log('本地阅读进度已保存:', readingProgress);
-            return;
-        }
-
         try {
             await fetch(`/api/reading/progress/${currentBook.id}`, {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(readingProgress)
             });
@@ -603,12 +571,6 @@
     }
 
     function toggleTemplates() {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            showAlert('模板功能需要登录后使用', 'warning');
-            return;
-        }
-
         hideAllPanels();
         createTemplateFromSelection();
     }
@@ -671,25 +633,16 @@
     }
 
     async function loadSensitiveWords() {
-        // 未登录，从本地存储加载
-        sensitiveWords = JSON.parse(localStorage.getItem('sensitiveWords') || '{}');
-        const token = localStorage.getItem('token');
-        if (!token) {
-            return;
-        }
-        // 已登录，从服务器加载
+        // 从服务器加载
         try {
-            const response = await fetch(`/api/sensitive-words/?book_id=${currentBook.id}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            const response = await fetch(`/api/sensitive-words/?book_id=${currentBook.id}`);
 
             if (response.ok) {
                 const serverWords = await response.json();
-                // 转换为原有格式
-                if (sensitiveWords[currentBook.id]) {
-                    for (const word of sensitiveWords[currentBook.id]) {
+                // 将本地遗留的敏感词迁移到服务器
+                const localWords = JSON.parse(localStorage.getItem('sensitiveWords') || '{}');
+                if (localWords[currentBook.id]) {
+                    for (const word of localWords[currentBook.id]) {
                         if (word.id) {
                             continue;
                         }
@@ -698,10 +651,10 @@
                         }
                         const newWord = await saveSensitiveToServer(word.original, word.replacement);
                         serverWords.push(newWord);
-                    };
-                    delete sensitiveWords[currentBook.id];
-                    if (Object.keys(sensitiveWords).length > 0) {
-                        localStorage.setItem('sensitiveWords', JSON.stringify(sensitiveWords));
+                    }
+                    delete localWords[currentBook.id];
+                    if (Object.keys(localWords).length > 0) {
+                        localStorage.setItem('sensitiveWords', JSON.stringify(localWords));
                     } else {
                         localStorage.removeItem('sensitiveWords');
                     }
@@ -714,26 +667,12 @@
         }
     }
 
-    async function saveSensitiveWords() {
-        // 未登录，保存到本地存储
-        const token = localStorage.getItem('token');
-        if (!token) {
-            localStorage.setItem('sensitiveWords', JSON.stringify(sensitiveWords));
-        }
-    }
-
     async function saveSensitiveToServer(original, replacement) {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            return;
-        }
-
         try {
             const response = await fetch('/api/sensitive-words/', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     book_id: currentBook.id,
@@ -807,20 +746,11 @@
             return;
         }
 
-        const token = localStorage.getItem('token');
-
-        if (token) {
-            // 已登录，保存到服务器
-            const newWord = await saveSensitiveToServer(originalWord, replacementWord);
-            if (newWord) {
-                sensitiveWords[currentBook.id].push(newWord);
-                showAlert('敏感词添加成功', 'success');
-            }
-        } else {
-            // 未登录，保存到本地
-            sensitiveWords[currentBook.id].push({ original: originalWord, replacement: replacementWord, enabled: true });
-            saveSensitiveWords();
-            showAlert('敏感词添加成功（本地）', 'success');
+        // 保存到服务器
+        const newWord = await saveSensitiveToServer(originalWord, replacementWord);
+        if (newWord) {
+            sensitiveWords[currentBook.id].push(newWord);
+            showAlert('敏感词添加成功', 'success');
         }
 
         document.getElementById('newSensitiveWord').value = '';
@@ -834,49 +764,41 @@
         const word = sensitiveWords[currentBook.id][index];
         word.enabled = !word.enabled;
 
-        const token = localStorage.getItem('token');
+        // 更新服务器
+        try {
+            const url = `/api/sensitive-words/${word.id ? word.id : ''}`;
+            const method = word.id ? 'PUT' : 'POST';
+            const body = word.id ? { enabled: word.enabled } : {
+                book_id: currentBook.id,
+                original: word.original,
+                replacement: word.replacement,
+                enabled: word.enabled
+            }
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
 
-        if (token) {
-            // 已登录且有ID，更新服务器
-            try {
-                const url = `/api/sensitive-words/${word.id ? word.id : ''}`;
-                const method = word.id ? 'PUT' : 'POST';
-                const body = word.id ? { enabled: word.enabled } : {
-                    book_id: currentBook.id,
-                    original: word.original,
-                    replacement: word.replacement,
-                    enabled: word.enabled
-                }
-                const response = await fetch(url, {
-                    method,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify(body)
-                });
-
-                if (!response.ok) {
-                    // 更新失败，恢复状态
-                    word.enabled = !word.enabled;
-                    showAlert('更新敏感词状态失败', 'danger');
-                    return;
-                }
-
-                if (response.ok && !word.id) {
-                    const newWord = await response.json();
-                    word.id = newWord.id;
-                    word.book_id = newWord.book_id;
-                }
-            } catch (error) {
-                console.error('更新敏感词状态失败:', error);
+            if (!response.ok) {
+                // 更新失败，恢复状态
                 word.enabled = !word.enabled;
                 showAlert('更新敏感词状态失败', 'danger');
                 return;
             }
-        } else {
-            // 未登录，保存到本地
-            saveSensitiveWords();
+
+            if (response.ok && !word.id) {
+                const newWord = await response.json();
+                word.id = newWord.id;
+                word.book_id = newWord.book_id;
+            }
+        } catch (error) {
+            console.error('更新敏感词状态失败:', error);
+            word.enabled = !word.enabled;
+            showAlert('更新敏感词状态失败', 'danger');
+            return;
         }
 
         showSensitiveWords();
@@ -889,16 +811,12 @@
         }
 
         const word = sensitiveWords[currentBook.id][index];
-        const token = localStorage.getItem('token');
 
-        if (token && word.id) {
-            // 已登录且有ID，从服务器删除
+        // 从服务器删除
+        if (word.id) {
             try {
                 const response = await fetch(`/api/sensitive-words/${word.id}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+                    method: 'DELETE'
                 });
 
                 if (!response.ok) {
@@ -914,11 +832,6 @@
 
         // 从本地数组中删除
         sensitiveWords[currentBook.id].splice(index, 1);
-
-        if (!token) {
-            // 未登录，保存到本地存储
-            saveSensitiveWords();
-        }
 
         showSensitiveWords();
         showAlert('敏感词删除成功', 'success');
@@ -1091,35 +1004,30 @@
 
 
     async function saveExcerpt() {
-        const token = localStorage.getItem('token');
+        // 保存到服务器
+        try {
+            const response = await fetch('/api/excerpts/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    book_id: currentBook.id,
+                    chapter_id: chapters[currentChapterIndex].id,
+                    content: currentSelectedText,
+                    note: currentBook.title + ' by: ' + currentBook.author
+                })
+            });
 
-        if (token) {
-            // 登录用户保存到服务器
-            try {
-                const response = await fetch('/api/excerpts/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        book_id: currentBook.id,
-                        chapter_id: chapters[currentChapterIndex].id,
-                        content: currentSelectedText,
-                        note: currentBook.title + ' by: ' + currentBook.author
-                    })
-                });
-
-                if (response.ok) {
-                    const newExcerpt = await response.json();
-                    showAlert('摘录保存成功', 'success');
-                } else {
-                    throw new Error('保存失败');
-                }
-            } catch (error) {
-                console.error('保存摘录失败:', error);
-                showAlert('保存摘录失败，已保存到本地', 'warning');
+            if (response.ok) {
+                const newExcerpt = await response.json();
+                showAlert('摘录保存成功', 'success');
+            } else {
+                throw new Error('保存失败');
             }
+        } catch (error) {
+            console.error('保存摘录失败:', error);
+            showAlert('保存摘录失败，请重试', 'danger');
         }
 
         // 移除选择工具提示

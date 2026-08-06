@@ -72,19 +72,11 @@
     let selectedTags = [];
 
     document.addEventListener('DOMContentLoaded', function () {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            showAlert('请先登录', 'warning');
-            window.location.href = '/auth';
-            return;
-        }
-
         loadAllTemplates();
     });
 
     // 加载模板
     async function loadAllTemplates() {
-        const token = localStorage.getItem('token');
         const container = document.getElementById('templatesContainer');
         const emptyState = document.getElementById('emptyState');
 
@@ -257,14 +249,9 @@
             return;
         }
 
-        const token = localStorage.getItem('token');
-
         try {
             const response = await fetch(`/api/templates/${templateId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                method: 'DELETE'
             });
 
             if (!response.ok) {

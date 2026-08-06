@@ -1,65 +1,5 @@
 // 全局变量
-let currentUser = null;
 let bookSources = [];
-
-// 页面加载完成后初始化
-document.addEventListener('DOMContentLoaded', function() {
-    checkAuthStatus();
-});
-
-// 检查登录状态
-function checkAuthStatus() {
-    const token = localStorage.getItem('token');
-    const username = localStorage.getItem('username');
-
-    if (token && username) {
-        currentUser = { username: username };
-        updateNavbar(true);
-    } else {
-        updateNavbar(false);
-    }
-}
-
-// 更新导航栏
-function updateNavbar(isLoggedIn) {
-    const loginNav = document.getElementById('loginNav');
-    const userNav = document.getElementById('userNav');
-    const adminNav = document.getElementById('adminNav');
-    const usernameSpan = document.getElementById('username');
-
-    if (isLoggedIn) {
-        loginNav.classList.add('d-none');
-        userNav.classList.remove('d-none');
-        if (usernameSpan) {
-            usernameSpan.textContent = currentUser.username;
-        }
-
-        // 简单的管理员检查（实际应用中应该从服务器验证）
-        if (currentUser.username === 'admin' || currentUser.username === 'administrator') {
-            if (adminNav) adminNav.classList.remove('d-none');
-        }
-    } else {
-        loginNav.classList.remove('d-none');
-        userNav.classList.add('d-none');
-        if (adminNav) adminNav.classList.add('d-none');
-    }
-}
-
-// 退出登录
-function logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('username');
-    localStorage.removeItem('token_expires_at');
-    localStorage.removeItem('remember_me');
-    currentUser = null;
-    updateNavbar(false);
-    showAlert('已退出登录', 'info');
-
-    // 如果在需要登录的页面，可以重定向到首页
-    if (window.location.pathname.includes('/book/')) {
-        window.location.href = '/';
-    }
-}
 
 // 显示搜索模态框
 function showSearchModal() {
@@ -190,12 +130,6 @@ function showSourceModal() {
 
 // 显示阅读历史
 async function showReadingHistory() {
-    const token = localStorage.getItem('token');
-    if (!token) {
-        showAlert('请先登录', 'warning');
-        return;
-    }
-
     // 显示模态框
     const modal = new bootstrap.Modal(document.getElementById('readingHistoryModal'));
     const content = document.getElementById('readingHistoryContent');
@@ -204,11 +138,7 @@ async function showReadingHistory() {
     modal.show();
 
     try {
-        const response = await fetch('/api/reading/history', {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
+        const response = await fetch('/api/reading/history');
 
         if (response.ok) {
             const history = await response.json();

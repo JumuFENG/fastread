@@ -10,16 +10,6 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
-class User(Base):
-    __tablename__ = "users"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True)
-    email = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
-    is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
 class Book(Base):
     __tablename__ = "books"
     
@@ -56,7 +46,6 @@ class ReadingProgress(Base):
     __tablename__ = "reading_progress"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
     book_id = Column(Integer, ForeignKey("books.id"))
     current_chapter = Column(Integer, default=1)
     reading_position = Column(Integer, default=0)
@@ -66,14 +55,12 @@ class Excerpt(Base):
     __tablename__ = "excerpts"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
     book_id = Column(Integer, ForeignKey("books.id"))
     chapter_id = Column(Integer, ForeignKey("chapters.id"))
     content = Column(Text)
     note = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
-    user = relationship("User")
     book = relationship("Book")
     chapter = relationship("Chapter")
 
@@ -81,7 +68,6 @@ class Template(Base):
     __tablename__ = "templates"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
     name = Column(String, index=True)
     content = Column(Text)
     keywords = Column(Text)  # JSON格式存储关键词列表
@@ -89,14 +75,11 @@ class Template(Base):
     description = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow)
-    
-    user = relationship("User")
 
 class Rewrite(Base):
     __tablename__ = "rewrites"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
     book_id = Column(Integer, ForeignKey("books.id"))
     chapter_id = Column(Integer, ForeignKey("chapters.id"))
     original_content = Column(Text)
@@ -105,7 +88,6 @@ class Rewrite(Base):
     type = Column(String)  # 'rewrite' 或 'insert'
     created_at = Column(DateTime, default=datetime.utcnow)
     
-    user = relationship("User")
     book = relationship("Book")
     chapter = relationship("Chapter")
 
@@ -113,14 +95,12 @@ class SensitiveWord(Base):
     __tablename__ = "sensitive_words"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
     book_id = Column(Integer, ForeignKey("books.id"))
     original = Column(String, index=True)
     replacement = Column(String)
     enabled = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
-    user = relationship("User")
     book = relationship("Book")
 
 def get_db():

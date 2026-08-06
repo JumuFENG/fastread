@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from database import get_db, ReadingProgress, User, Book
-from routers.auth import get_current_user
+from database import get_db, ReadingProgress, Book
 from pydantic import BaseModel
 from datetime import datetime
 
@@ -23,18 +22,15 @@ class UpdateProgress(BaseModel):
 @router.get("/progress/{book_id}", response_model=ReadingProgressResponse)
 async def get_reading_progress(
     book_id: int,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     progress = db.query(ReadingProgress).filter(
-        ReadingProgress.user_id == current_user.id,
         ReadingProgress.book_id == book_id
     ).first()
     
     if not progress:
         # 创建新的阅读进度
         progress = ReadingProgress(
-            user_id=current_user.id,
             book_id=book_id,
             current_chapter=1,
             reading_position=0
@@ -49,17 +45,14 @@ async def get_reading_progress(
 async def update_reading_progress(
     book_id: int,
     progress_data: UpdateProgress,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     progress = db.query(ReadingProgress).filter(
-        ReadingProgress.user_id == current_user.id,
         ReadingProgress.book_id == book_id
     ).first()
     
     if not progress:
         progress = ReadingProgress(
-            user_id=current_user.id,
             book_id=book_id
         )
         db.add(progress)
@@ -73,12 +66,9 @@ async def update_reading_progress(
 
 @router.get("/history")
 async def get_reading_history(
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    history = db.query(ReadingProgress, Book).join(Book).filter(
-        ReadingProgress.user_id == current_user.id
-    ).order_by(ReadingProgress.last_read_at.desc()).all()
+    history = db.query(ReadingProgress, Book).join(Book).order_by(ReadingProgress.last_read_at.desc()).all()
     
     result = []
     for progress, book in history:

@@ -47,6 +47,49 @@ def migrate_database():
         conn.commit()
         print("数据库迁移完成！")
         
+        # 单用户模式迁移：删除 user_id 列和 users 表
+        # SQLite不允许直接删除外键列，需要重建表
+        for table in ['reading_progress', 'excerpts', 'templates', 'rewrites', 'sensitive_words']:
+            # 处理上次迁移中断遗留的 _old 表
+            cursor.execute(f"PRAGMA table_info({table}_old)")
+            if cursor.fetchall():
+                print(f"发现遗留的{table}_old表，继续迁移...")
+                Base.metadata.create_all(bind=engine)
+                cursor.execute(f"PRAGMA table_info({table})")
+                new_columns = [column[1] for column in cursor.fetchall()]
+                old_columns = [column[1] for column in cursor.execute(f"PRAGMA table_info({table}_old)").fetchall()]
+                common = [c for c in old_columns if c in new_columns]
+                cursor.execute(
+                    f"INSERT OR IGNORE INTO {table} ({', '.join(common)}) "
+                    f"SELECT {', '.join(common)} FROM {table}_old"
+                )
+                cursor.execute(f"DROP TABLE {table}_old")
+                conn.commit()
+                continue
+            cursor.execute(f"PRAGMA table_info({table})")
+            columns = [column[1] for column in cursor.fetchall()]
+            if 'user_id' not in columns:
+                continue
+            print(f"重建{table}表，删除user_id字段...")
+            cursor.execute(f"ALTER TABLE {table} RENAME TO {table}_old")
+            # 删除旧表上的索引，避免与新表索引重名
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name=? AND sql IS NOT NULL", (f"{table}_old",))
+            for (index_name,) in cursor.fetchall():
+                cursor.execute(f"DROP INDEX {index_name}")
+            conn.commit()
+            Base.metadata.create_all(bind=engine)
+            new_columns = [column[1] for column in cursor.execute(f"PRAGMA table_info({table})").fetchall()]
+            common = [c for c in columns if c in new_columns]
+            cursor.execute(
+                f"INSERT INTO {table} ({', '.join(common)}) "
+                f"SELECT {', '.join(common)} FROM {table}_old"
+            )
+            cursor.execute(f"DROP TABLE {table}_old")
+            conn.commit()
+        cursor.execute("DROP TABLE IF EXISTS users")
+        conn.commit()
+        print("单用户模式迁移完成！")
+        
     except Exception as e:
         print(f"迁移失败: {e}")
         conn.rollback()
@@ -115,15 +158,7 @@ def check_book_table():
     db.commit()
     db.close()
 
-def check_users_table():
-    db = SessionLocal()
-    users = db.query(User).all()
-    for u in users:
-        print(u.id, u.username, u.email)
-    db.commit()
-    db.close()
-
 if __name__ == "__main__":
     print("检查当前数据库结构...")
-    check_users_table()
+    check_database_schema()
     

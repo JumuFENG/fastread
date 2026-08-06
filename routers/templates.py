@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from database import get_db, Template, User
-from routers.auth import get_current_user
+from database import get_db, Template
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
@@ -44,7 +43,6 @@ class TemplateApply(BaseModel):
 @router.post("/", response_model=TemplateResponse)
 async def create_template(
     template: TemplateCreate,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """创建模板"""
@@ -57,7 +55,6 @@ async def create_template(
             )
     
     db_template = Template(
-        user_id=current_user.id,
         name=template.name,
         content=template.content,
         keywords=json.dumps(template.keywords, ensure_ascii=False),
@@ -78,11 +75,10 @@ async def create_template(
 @router.get("/", response_model=List[TemplateResponse])
 async def get_templates(
     tag: Optional[str] = None,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """获取用户的模板列表"""
-    templates = db.query(Template).filter(Template.user_id == current_user.id).all()
+    """获取模板列表"""
+    templates = db.query(Template).all()
     
     # 转换JSON字段并过滤标签
     result = []
@@ -100,13 +96,11 @@ async def get_templates(
 @router.get("/{template_id}", response_model=TemplateResponse)
 async def get_template(
     template_id: int,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """获取单个模板"""
     template = db.query(Template).filter(
-        Template.id == template_id,
-        Template.user_id == current_user.id
+        Template.id == template_id
     ).first()
     
     if not template:
@@ -122,13 +116,11 @@ async def get_template(
 async def update_template(
     template_id: int,
     template_update: TemplateUpdate,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """更新模板"""
     template = db.query(Template).filter(
-        Template.id == template_id,
-        Template.user_id == current_user.id
+        Template.id == template_id
     ).first()
     
     if not template:
@@ -159,13 +151,11 @@ async def update_template(
 @router.delete("/{template_id}")
 async def delete_template(
     template_id: int,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """删除模板"""
     template = db.query(Template).filter(
-        Template.id == template_id,
-        Template.user_id == current_user.id
+        Template.id == template_id
     ).first()
     
     if not template:

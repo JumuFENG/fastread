@@ -99,28 +99,16 @@
     let currentEditExcerptId = null;
 
     document.addEventListener('DOMContentLoaded', function () {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            showAlert('请先登录', 'warning');
-            window.location.href = '/auth';
-            return;
-        }
-
         loadExcerpts();
     });
 
     // 加载摘录
     async function loadExcerpts() {
-        const token = localStorage.getItem('token');
         const container = document.getElementById('excerptsContainer');
         const emptyState = document.getElementById('emptyState');
 
         try {
-            const response = await fetch('/api/excerpts/', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            const response = await fetch('/api/excerpts/');
 
             if (!response.ok) {
                 throw new Error('获取摘录失败');
@@ -274,15 +262,13 @@
 
     // 保存摘录笔记
     async function saveExcerptNote() {
-        const token = localStorage.getItem('token');
         const note = document.getElementById('editExcerptNote').value;
 
         try {
             const response = await fetch(`/api/excerpts/${currentEditExcerptId}`, {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ note: note })
             });
@@ -312,14 +298,9 @@
             return;
         }
 
-        const token = localStorage.getItem('token');
-
         try {
             const response = await fetch(`/api/excerpts/${excerptId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                method: 'DELETE'
             });
 
             if (!response.ok) {
@@ -399,16 +380,11 @@
             return;
         }
 
-        const token = localStorage.getItem('token');
-
         try {
             // 逐个删除
             for (const excerpt of allExcerpts) {
                 await fetch(`/api/excerpts/${excerpt.id}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+                    method: 'DELETE'
                 });
             }
 

@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from database import get_db, Rewrite, User, Book, Chapter
-from routers.auth import get_current_user
+from database import get_db, Rewrite, Book, Chapter
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
@@ -36,7 +35,6 @@ class RewriteUpdate(BaseModel):
 @router.post("/", response_model=RewriteResponse)
 async def create_rewrite(
     rewrite: RewriteCreate,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """创建重写/插入内容"""
@@ -53,7 +51,6 @@ async def create_rewrite(
         raise HTTPException(status_code=404, detail="章节不存在")
     
     db_rewrite = Rewrite(
-        user_id=current_user.id,
         book_id=rewrite.book_id,
         chapter_id=rewrite.chapter_id,
         original_content=rewrite.original_content,
@@ -72,11 +69,10 @@ async def create_rewrite(
 async def get_rewrites(
     book_id: Optional[int] = None,
     chapter_id: Optional[int] = None,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """获取用户的重写列表"""
-    query = db.query(Rewrite).filter(Rewrite.user_id == current_user.id)
+    """获取重写列表"""
+    query = db.query(Rewrite)
     
     if book_id:
         query = query.filter(Rewrite.book_id == book_id)
@@ -89,13 +85,11 @@ async def get_rewrites(
 @router.get("/{rewrite_id}", response_model=RewriteResponse)
 async def get_rewrite(
     rewrite_id: int,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """获取单个重写"""
     rewrite = db.query(Rewrite).filter(
-        Rewrite.id == rewrite_id,
-        Rewrite.user_id == current_user.id
+        Rewrite.id == rewrite_id
     ).first()
     
     if not rewrite:
@@ -107,13 +101,11 @@ async def get_rewrite(
 async def update_rewrite(
     rewrite_id: int,
     rewrite_update: RewriteUpdate,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """更新重写内容"""
     rewrite = db.query(Rewrite).filter(
-        Rewrite.id == rewrite_id,
-        Rewrite.user_id == current_user.id
+        Rewrite.id == rewrite_id
     ).first()
     
     if not rewrite:
@@ -132,13 +124,11 @@ async def update_rewrite(
 @router.delete("/{rewrite_id}")
 async def delete_rewrite(
     rewrite_id: int,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """删除重写内容"""
     rewrite = db.query(Rewrite).filter(
-        Rewrite.id == rewrite_id,
-        Rewrite.user_id == current_user.id
+        Rewrite.id == rewrite_id
     ).first()
     
     if not rewrite:
@@ -152,7 +142,6 @@ async def delete_rewrite(
 @router.get("/chapter/{chapter_id}/merged")
 async def get_merged_chapter_content(
     chapter_id: int,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """获取合并了重写内容的章节"""
@@ -163,8 +152,7 @@ async def get_merged_chapter_content(
     
     # 获取该章节的所有重写
     rewrites = db.query(Rewrite).filter(
-        Rewrite.chapter_id == chapter_id,
-        Rewrite.user_id == current_user.id
+        Rewrite.chapter_id == chapter_id
     ).order_by(Rewrite.position.desc()).all()  # 倒序处理，避免位置偏移
     
     # 合并内容

@@ -274,21 +274,15 @@ async function saveTemplate() {
         return;
     }
     
-    const token = localStorage.getItem('token');
     const description = document.getElementById('templateDescription').value.trim();
     const tags = getCheckedTags();
     const keywords = currentKeywords.filter(k => k.checked).map(k => k.key);
-    if (!token) {
-        showAlert('请先登录', 'warning');
-        return;
-    }
     
     try {
         const response = await fetch(`/api/templates/${currentEditTemplateId??''}`, {
             method: currentEditTemplateId ? 'PUT' : 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 name: name,
@@ -364,15 +358,8 @@ function editTemplate(templateId) {
 }
 
 async function loadTemplates() {
-    const token = localStorage.getItem('token');
-    if (!token) return [];
-
     try {
-        const response = await fetch('/api/templates/', {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
+        const response = await fetch('/api/templates/');
 
         if (response.ok) {
             allTemplates = await response.json();

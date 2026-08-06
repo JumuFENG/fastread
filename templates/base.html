@@ -31,40 +31,27 @@
                     <li class="nav-item">
                         <a class="nav-link" href="#" onclick="showSourceModal()">书源管理</a>
                     </li>
-                    <li class="nav-item d-none" id="adminNav">
-                        <a class="nav-link" href="/users">用户管理</a>
-                    </li>
                 </ul>
                 <ul class="navbar-nav">
-                    <li class="nav-item" id="loginNav">
-                        <a class="nav-link" href="/auth">登录</a>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showReadingHistory()">
+                            <i class="bi bi-clock-history"></i> 阅读历史
+                        </a>
                     </li>
-                    <li class="nav-item d-none" id="userNav">
-                        <div class="dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                <span id="username"></span>
-                            </a>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="#" onclick="showReadingHistory()">
-                                    <i class="bi bi-clock-history"></i> 阅读历史
-                                </a></li>
-                                <li><a class="dropdown-item" href="/excerpts">
-                                    <i class="bi bi-bookmark"></i> 我的摘录
-                                </a></li>
-                                <li><a class="dropdown-item" href="/my-templates">
-                                    <i class="bi bi-file-text"></i> 我的模板
-                                </a></li>
-                                <li><a class="dropdown-item" href="/settings">
-                                    <i class="bi bi-gear"></i> 设置
-                                </a></li>
-                                <li>
-                                    <hr class="dropdown-divider">
-                                </li>
-                                <li><a class="dropdown-item" href="#" onclick="logout()">
-                                    <i class="bi bi-box-arrow-right"></i> 退出登录
-                                </a></li>
-                            </ul>
-                        </div>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/excerpts">
+                            <i class="bi bi-bookmark"></i> 我的摘录
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/my-templates">
+                            <i class="bi bi-file-text"></i> 我的模板
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/settings">
+                            <i class="bi bi-gear"></i> 设置
+                        </a>
                     </li>
                 </ul>
             </div>
@@ -271,7 +258,6 @@
     {% block modals %} {% endblock %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/static/js/token-manager.js"></script>
     <script src="/static/js/app.js"></script>
     {% block scripts %}{% endblock %}
 </body>
