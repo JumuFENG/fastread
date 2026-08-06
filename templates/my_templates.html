@@ -9,13 +9,16 @@
             <h2><i class="bi bi-file-text"></i> 我的模板</h2>
             <div class="btn-group">
                 <button class="btn btn-primary" onclick="showCreateTemplateForm()">
-                    <i class="bi bi-plus-circle"></i> 创建模板
+                    <i class="bi bi-plus-circle"></i><span class="d-none d-md-inline"> 创建模板</span>
                 </button>
                 <button class="btn btn-outline-primary" onclick="refreshTemplates()">
-                    <i class="bi bi-arrow-clockwise"></i> 刷新
+                    <i class="bi bi-arrow-clockwise"></i><span class="d-none d-md-inline"> 刷新</span>
                 </button>
                 <button class="btn btn-outline-success" onclick="exportTemplates()">
-                    <i class="bi bi-download"></i> 导出
+                    <i class="bi bi-download"></i><span class="d-none d-md-inline"> 导出</span>
+                </button>
+                <button class="btn btn-outline-secondary" onclick="history.length > 1 ? history.back() : location.href='/'">
+                    <i class="bi bi-x-lg"></i><span class="d-none d-md-inline"> 关闭</span>
                 </button>
             </div>
         </div>
