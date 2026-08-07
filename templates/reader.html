@@ -183,8 +183,21 @@
                     </div>
                 </div>
             </div>
+
+            <!-- 续写/编辑区域 -->
+            <div class="text-center my-3 d-none" id="continueArea">
+                <button class="btn btn-outline-primary btn-sm me-2" id="btnEditChapter" onclick="openEditModal()">
+                    <i class="bi bi-pencil"></i> 编辑本章
+                </button>
+                <button class="btn btn-outline-success btn-sm" id="btnContinueChapter" onclick="openContinueModal()">
+                    <i class="bi bi-pencil-square"></i> 续写
+                </button>
+            </div>
         </div>
     </div>
+
+    <!-- 空白占位div：防止内容被底部固定的导航按钮遮挡，后续添加到章节最后的内容都应放在此div之前 -->
+    <div style="height: 40px;"></div>
 </div>
 
 <!-- 导航按钮 -->
@@ -205,6 +218,26 @@
             <span class="d-none d-md-inline">下一章</span>
             <i class="bi bi-chevron-right"></i>
         </button>
+    </div>
+</div>
+
+<!-- 续写/编辑章节模态框 -->
+<div class="modal fade" id="continueModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="continueModalTitle">续写</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input id="continueChapterTitle" class="form-control mb-2" placeholder="章节标题">
+                <textarea id="continueChapterContent" class="form-control" rows="12" placeholder="在这里写正文..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button class="btn btn-primary" onclick="saveContinueChapter()">保存</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -401,6 +434,13 @@
             document.getElementById('prevChapter').disabled = chapterIndex === 0;
             document.getElementById('nextChapter').disabled = chapterIndex === chapters.length - 1;
 
+            // 更新续写/编辑按钮：末章可续写，续写的章节可再次编辑
+            const isUserWritten = !chapter.source_url;
+            const isLastChapter = chapterIndex === chapters.length - 1;
+            document.getElementById('continueArea').classList.toggle('d-none', !(isLastChapter || isUserWritten));
+            document.getElementById('btnEditChapter').classList.toggle('d-none', !isUserWritten);
+            document.getElementById('btnContinueChapter').classList.toggle('d-none', !isLastChapter);
+
 
             updateChapterProgress();
 
@@ -530,6 +570,62 @@
         let i2 = currentChapterIndex + 2;
         if (currentChapterIndex + 1 < chapters.length) loadChapter(currentChapterIndex + 1);
         if (i2 < chapters.length) preloadChapter(i2);
+    }
+
+    let continueEditingNumber = null;
+
+    function openContinueModal() {
+        continueEditingNumber = null;
+        document.getElementById('continueModalTitle').textContent = '续写本章';
+        document.getElementById('continueChapterTitle').value = `第${chapters.length + 1}章`;
+        document.getElementById('continueChapterContent').value = '';
+        new bootstrap.Modal(document.getElementById('continueModal')).show();
+    }
+
+    function openEditModal() {
+        const chapter = chapters[currentChapterIndex];
+        continueEditingNumber = chapter.chapter_number;
+        document.getElementById('continueModalTitle').textContent = '编辑本章';
+        document.getElementById('continueChapterTitle').value = chapter.title;
+        const data = currentBook.currentChapterData || {};
+        document.getElementById('continueChapterContent').value = data.content || '';
+        new bootstrap.Modal(document.getElementById('continueModal')).show();
+    }
+
+    async function saveContinueChapter() {
+        const title = document.getElementById('continueChapterTitle').value.trim();
+        const content = document.getElementById('continueChapterContent').value;
+        if (!title || !content.trim()) {
+            showAlert('标题和内容不能为空', 'warning');
+            return;
+        }
+        const isEdit = continueEditingNumber !== null;
+        const response = await fetch(
+            isEdit
+                ? `/api/books/${currentBook.id}/chapters/${continueEditingNumber}`
+                : `/api/books/${currentBook.id}/chapters/continue`,
+            {
+                method: isEdit ? 'PUT' : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, content })
+            }
+        );
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            showAlert(err.detail || '保存失败', 'danger');
+            return;
+        }
+        bootstrap.Modal.getInstance(document.getElementById('continueModal')).hide();
+        if (isEdit) {
+            chapters[currentChapterIndex].title = title;
+            await loadChapter(currentChapterIndex);
+        } else {
+            const newChapter = await response.json();
+            await loadChapters(currentBook.id);
+            const newIndex = chapters.findIndex(c => c.id === newChapter.id);
+            await loadChapter(newIndex >= 0 ? newIndex : chapters.length - 1);
+        }
+        showAlert(isEdit ? '章节已更新' : '续写成功', 'success');
     }
 
     function updateChapterProgress() {

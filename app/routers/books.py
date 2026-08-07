@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from typing import List, Optional
+import re
 from app.database import get_db, Book, Chapter
 from pydantic import BaseModel
 from datetime import datetime
@@ -32,6 +34,14 @@ class ChapterResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class ChapterWrite(BaseModel):
+    title: str
+    content: str
+
+def normalize_chapter_content(content: str) -> str:
+    """将换行归一化为段落分隔（\\n\\n），与阅读页分段渲染保持一致"""
+    return re.sub(r'\n{2,}', '\n\n', content.replace('\r\n', '\n').replace('\n', '\n\n'))
 
 class BookCreate(BaseModel):
     title: str
@@ -197,6 +207,57 @@ async def fetch_chapter_content_realtime(chapter: Chapter, db: Session) -> str:
 
     except Exception as e:
         raise Exception(f"获取章节内容失败: {str(e)}")
+
+@router.post("/{book_id}/chapters/continue")
+async def continue_book_chapter(book_id: int, body: ChapterWrite, db: Session = Depends(get_db)):
+    """在最后一章之后续写一个新章节"""
+    book = db.query(Book).filter(Book.id == book_id).first()
+    if not book:
+        raise HTTPException(status_code=404, detail="书籍不存在")
+
+    title, content = body.title.strip(), normalize_chapter_content(body.content)
+    if not title or not content.strip():
+        raise HTTPException(status_code=400, detail="标题和内容不能为空")
+
+    max_num = db.query(func.max(Chapter.chapter_number)).filter(Chapter.book_id == book_id).scalar() or 0
+    chapter = Chapter(
+        book_id=book_id,
+        title=title,
+        content=content,
+        chapter_number=max_num + 1,
+        source_url='',
+        is_cached=True,
+        cached_at=datetime.utcnow()
+    )
+    db.add(chapter)
+    book.total_chapters = max_num + 1
+    db.commit()
+    db.refresh(chapter)
+    return {"id": chapter.id, "title": chapter.title, "chapter_number": chapter.chapter_number, "is_cached": chapter.is_cached}
+
+
+@router.put("/{book_id}/chapters/{chapter_number}")
+async def edit_chapter_content(book_id: int, chapter_number: int, body: ChapterWrite, db: Session = Depends(get_db)):
+    """编辑续写的章节（仅限无来源的章节）"""
+    chapter = db.query(Chapter).filter(
+        Chapter.book_id == book_id,
+        Chapter.chapter_number == chapter_number
+    ).first()
+    if not chapter:
+        raise HTTPException(status_code=404, detail="章节不存在")
+    if chapter.source_url:
+        raise HTTPException(status_code=400, detail="仅可编辑续写的章节")
+
+    title, content = body.title.strip(), normalize_chapter_content(body.content)
+    if not title or not content.strip():
+        raise HTTPException(status_code=400, detail="标题和内容不能为空")
+
+    chapter.title = title
+    chapter.content = content
+    chapter.is_cached = True
+    db.commit()
+    return {"id": chapter.id, "title": chapter.title, "chapter_number": chapter.chapter_number, "is_cached": chapter.is_cached}
+
 
 # 添加章节预加载功能
 @router.post("/{book_id}/chapters/{chapter_number}/preload")
