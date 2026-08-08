@@ -256,6 +256,23 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/static/js/app.js"></script>
+    <script>
+        // 移动端滚动时自动隐藏/显示导航栏：页面上滑(向下滚动)隐藏，下滑(向上滚动)显示
+        let navbarLastScrollY = window.pageYOffset;
+        window.addEventListener('scroll', function () {
+            if (window.innerWidth > 768) return;
+            const navbar = document.querySelector('.navbar');
+            if (!navbar) return;
+            const y = window.pageYOffset;
+            const delta = y - navbarLastScrollY;
+            navbarLastScrollY = y;
+            if (y <= 5) {
+                navbar.classList.remove('navbar-hidden');
+            } else if (Math.abs(delta) > 8) {
+                navbar.classList.toggle('navbar-hidden', delta > 0);
+            }
+        });
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 

@@ -804,17 +804,17 @@ body.offline::before {
     }
 }
 
-/* ===== 阅读
-器专用样式 ===== */
+/* ===== 阅读器专用样式 ===== */
 
 /* 浮动工具栏样式 */
 .reader-toolbar {
     position: fixed;
-    top: 60px;
-    right: 40px;
-    z-index: 1050;
+    top: 80px;
+    right: 20px;
+    z-index: 1000;
     display: flex;
-    gap: 5px;
+    flex-direction: column;
+    gap: 0.5rem;
     background: rgba(255, 255, 255, 0.95);
     padding: 8px;
     border-radius: 8px;
@@ -897,6 +897,9 @@ body.offline::before {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-top: 1px solid #dee2e6;
+    padding-top: 0.5rem;
+    margin-top: 0.5rem;
 }
 
 .theme-dark .excerpt-meta,
@@ -984,12 +987,6 @@ body.offline::before {
 
 .excerpt-content p {
     margin-bottom: 0;
-}
-
-.excerpt-meta {
-    border-top: 1px solid #dee2e6;
-    padding-top: 0.5rem;
-    margin-top: 0.5rem;
 }
 
 .excerpt-note {
@@ -1087,16 +1084,6 @@ body.offline::before {
 }
 
 /* 工具栏按钮样式 */
-.reader-toolbar {
-    position: fixed;
-    top: 80px;
-    right: 20px;
-    z-index: 1000;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
 .reader-toolbar .btn {
     border-radius: 50%;
     width: 40px;
@@ -1124,6 +1111,14 @@ body.offline::before {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
+    .navbar {
+        transition: transform 0.3s ease;
+    }
+
+    .navbar.navbar-hidden {
+        transform: translateY(-100%);
+    }
+
     .reader-toolbar {
         top: 10px;
         right: 10px;
@@ -1157,6 +1152,16 @@ body.offline::before {
 
     #readerToolbarHome {
         display: block;
+    }
+
+    #readerToolbarHome .nav-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        color: inherit;
     }
 
     /* 移动端面板头部样式优化 */
