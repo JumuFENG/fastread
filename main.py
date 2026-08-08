@@ -2,10 +2,14 @@ from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
+import asyncio
+import threading
+import time
+
 import uvicorn
 from app.database import engine, Base
-from app.lofig import Config
-from app.routers import books, reading, sources, excerpts, rewrites, sensitive_words, ai
+from app.lofig import Config, logger
+from app.routers import books, reading, sources, excerpts, rewrites, sensitive_words, ai, updates
 from app.routers import templates as rtemplates
 
 # 创建数据库表
@@ -28,6 +32,7 @@ app.include_router(rtemplates.router, prefix="/api/templates", tags=["模板管�
 app.include_router(rewrites.router, prefix="/api/rewrites", tags=["重写功能"])
 app.include_router(sensitive_words.router, prefix="/api/sensitive-words", tags=["敏感词管理"])
 app.include_router(ai.router, prefix="/api/ai", tags=["AI功能"])
+app.include_router(updates.router, prefix="/api", tags=["系统更新"])
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
@@ -50,5 +55,18 @@ async def read_book(request: Request, book_id: int):
     return templates.TemplateResponse("reader.html", {"request": request, "book_id": book_id})
 
 
+def start_server():
+    if Config.client_config().get('upgrade') == 'auto':
+        def _auto_update():
+            time.sleep(5)
+            try:
+                result = asyncio.run(updates.apply_update())
+                logger.info("auto update: %s", result)
+            except Exception as e:
+                logger.warning("auto update failed: %s", e)
+        threading.Thread(target=_auto_update, daemon=True, name='auto-update').start()
+    uvicorn.run(app, host="0.0.0.0", port=Config.client_config().get("port", 8777), log_config=None, access_log=False)
+
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=Config.client_config().get("port", 8777))
+    start_server()

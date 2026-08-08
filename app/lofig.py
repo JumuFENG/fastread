@@ -25,6 +25,8 @@ class Config:
             "log_level": "INFO",
             "port": 8777,
             "log_handler": ["file"],
+            "update_server": "https://prod.ailyf.cn",
+            "upgrade": "auto",
         }
         if not os.path.isfile(cfg_path):
             self.save({"client": client_defaults})

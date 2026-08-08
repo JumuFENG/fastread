@@ -89,6 +89,37 @@
     </div>
 </div>
 
+<hr>
+
+<!-- 更新设置 -->
+<div id="updateSettingsPanel">
+    <h6>更新设置</h6>
+    <div class="row align-items-center">
+        <div class="col-md-6 mb-2">
+            <div class="d-flex flex-wrap gap-3">
+                <label class="form-check-label me-3" title="自动检查新版本并更新">
+                    <input type="radio" name="s_upgrade" value="auto" class="form-check-input" onchange="saveUpdateConfig()"> 自动更新
+                </label>
+                <label class="form-check-label me-3" title="自动检查新版本提醒我更新">
+                    <input type="radio" name="s_upgrade" value="manual" class="form-check-input" onchange="saveUpdateConfig()"> 提醒我
+                </label>
+                <label class="form-check-label" title="不自动检查">
+                    <input type="radio" name="s_upgrade" value="off" class="form-check-input" onchange="saveUpdateConfig()"> 不检查
+                </label>
+            </div>
+        </div>
+        <div class="col-md-6 mb-2 d-flex align-items-center" id="s_check_row">
+            <span id="s_check_now" class="me-2" style="cursor:pointer" onclick="checkUpdateNow()" title="立即检查更新">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            </span>
+            <span id="s_update_btn" class="me-2" style="display:none;cursor:pointer" onclick="goUpdate()" title="立即更新">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </span>
+            <span id="s_check_result" style="font-size:12px;color:#999;">立即检查</span>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -108,7 +139,74 @@
             document.getElementById('autoScrollSpeed').value = autoScrollSpeed;
         }
         loadAiConfig();
+        loadUpdateConfig();
     })
+
+    // 更新设置功能
+    function toggleUpdateFields() {
+        const mode = document.querySelector('input[name="s_upgrade"]:checked');
+        const show = mode && mode.value !== 'auto';
+        document.getElementById('s_check_row').style.visibility = show ? 'visible' : 'hidden';
+        document.getElementById('s_check_now').style.display = show ? '' : 'none';
+        document.getElementById('s_check_result').textContent = '立即检查';
+        document.getElementById('s_update_btn').style.display = 'none';
+    }
+
+    async function loadUpdateConfig() {
+        try {
+            const response = await fetch('/api/update/config');
+            const cfg = await response.json();
+            const mode = cfg.upgrade === 'manual' ? 'manual' : (cfg.upgrade === 'off' ? 'off' : 'auto');
+            const radio = document.querySelector(`input[name="s_upgrade"][value="${mode}"]`);
+            if (radio) radio.checked = true;
+            toggleUpdateFields();
+        } catch (e) {
+            console.error('加载更新配置失败:', e);
+        }
+    }
+
+    async function saveUpdateConfig() {
+        const mode = document.querySelector('input[name="s_upgrade"]:checked');
+        toggleUpdateFields();
+        if (!mode) return;
+        try {
+            const response = await fetch('/api/update/config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ upgrade: mode.value })
+            });
+            const data = await response.json();
+            showAlert(data.message || '保存失败', response.ok ? 'success' : 'danger');
+        } catch (e) {
+            showAlert('保存失败，请检查网络连接', 'danger');
+        }
+    }
+
+    async function checkUpdateNow() {
+        const resultEl = document.getElementById('s_check_result');
+        resultEl.style.color = '#999';
+        resultEl.textContent = '检查中...';
+        document.getElementById('s_update_btn').style.display = 'none';
+        try {
+            const resp = await fetch('/api/update/check');
+            const data = await resp.json();
+            if (data.error) {
+                resultEl.textContent = '检查失败';
+                return;
+            }
+            if (data.has_update) {
+                resultEl.textContent = '发现新版本 v' + data.latest;
+                document.getElementById('s_check_now').style.display = 'none';
+                document.getElementById('s_update_btn').style.display = '';
+            } else {
+                resultEl.textContent = '已是最新版本 (v' + data.current + ')';
+            }
+        } catch (e) {
+            resultEl.textContent = '检查失败';
+        }
+    }
 
     // AI配置功能
     async function loadAiConfig() {

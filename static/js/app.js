@@ -1159,3 +1159,55 @@ function cancelBatchImport() {
     window.batchImportCancelled = true;
     showAlert('正在取消批量导入...', 'warning');
 }
+
+// 检查更新
+async function checkForUpdates() {
+    try {
+        const resp = await fetch('/api/update/check');
+        const data = await resp.json();
+        if (data.error || !data.has_update || data.upgrade !== 'manual') return;
+        document.getElementById('updateBannerText').textContent = '发现新版本 v' + data.latest;
+        document.getElementById('updateBanner').style.display = 'block';
+    } catch (e) {
+        // 忽略更新检查失败
+    }
+}
+
+// 立即更新
+let updating = false;
+
+async function goUpdate() {
+    if (updating) return;
+    updating = true;
+    const btnEl = document.getElementById('s_update_btn');
+    const resEl = document.getElementById('s_check_result');
+    const goEl = document.getElementById('updateBannerGo');
+    const setResult = (msg, color) => {
+        if (resEl) { resEl.style.color = color; resEl.textContent = msg; }
+    };
+    if (btnEl) btnEl.style.display = 'none';
+    if (goEl) { goEl.style.pointerEvents = 'none'; goEl.style.opacity = '.5'; }
+    setResult('正在下载并更新...', '#999');
+    try {
+        const resp = await fetch('/api/update/apply', { method: 'POST' });
+        const data = await resp.json();
+        if (data && data.status === 'success') {
+            setResult(data.message || '更新成功', '#2a7d2a');
+            const bannerText = document.getElementById('updateBannerText');
+            if (bannerText) bannerText.textContent = data.message || '更新成功';
+            setTimeout(() => {
+                const banner = document.getElementById('updateBanner');
+                if (banner) banner.style.display = 'none';
+            }, 3000);
+        } else {
+            setResult((data && data.message) || '更新失败', '#c00');
+        }
+    } catch (e) {
+        setResult('更新失败', '#c00');
+    } finally {
+        updating = false;
+        if (goEl) { goEl.style.pointerEvents = ''; goEl.style.opacity = ''; }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', checkForUpdates);

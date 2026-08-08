@@ -40,6 +40,38 @@ python main.py
 
 应用将在 http://localhost:8000 启动
 
+## 桌面版与安装
+
+### 桌面版运行（macOS / Linux）
+
+本地开发目录下可直接用 Python 运行桌面窗口（需先安装 PyQt6）：
+
+```bash
+pip install PyQt6 PyQt6-WebEngine
+python desktop.py
+```
+
+安装桌面启动器（自动创建 `/Applications/FastRead.app` 或 Linux `.desktop` 菜单项）：
+
+```bash
+bash scripts/install_boot_service.sh          # 仅桌面启动器
+bash scripts/install_boot_service.sh --service   # 额外注册开机自启后台服务 (crontab @reboot)
+```
+
+### Windows 安装器
+
+在 Windows 上执行 `scripts\build_installer.bat` 生成 `dist\fastread_installer.exe`，
+运行安装程序时可选「注册为后台服务并开机自启」，不勾选则仅部署程序并创建桌面快捷方式。
+
+## 自动更新
+
+- 更新检查通过 `{update_server}/api/products/4/latest` 查询（product_id=4），
+  更新包从 `{update_server}/downloads/fastread/fastread-{version}.zip` 下载并覆盖程序文件。
+- 更新服务器与更新模式可在 `config/config.json` 的 `client` 段配置：
+  - `update_server`：默认 `https://prod.ailyf.cn`
+  - `upgrade`：`auto`（启动后自动更新，默认）/ `manual`（界面顶部显示更新横幅，点击「立即更新」手动更新）
+- 相关接口：`GET /api/update/check`、`POST /api/update/apply`。
+
 ## 项目结构
 
 ```
