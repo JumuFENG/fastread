@@ -35,8 +35,8 @@ async def ai_generate(request: AIGenerateRequest):
     ai_cfg = Config.ai_config()
     api_url = ai_cfg.get("api_url", "").strip()
     api_key = ai_cfg.get("api_key", "").strip()
-    if not api_url or not api_key:
-        raise HTTPException(status_code=400, detail="请先在设置中配置AI API地址和密钥")
+    if not api_url:
+        raise HTTPException(status_code=400, detail="请先在设置中配置AI API地址")
 
     model = ai_cfg.get("model", "").strip() or "gpt-4o-mini"
 
@@ -53,10 +53,13 @@ async def ai_generate(request: AIGenerateRequest):
     }
 
     try:
-        async with httpx.AsyncClient(timeout=120) as client:
+        async with httpx.AsyncClient(timeout=300) as client:
+            headers = {}
+            if api_key:
+                headers["Authorization"] = f"Bearer {api_key}"
             response = await client.post(
                 api_url,
-                headers={"Authorization": f"Bearer {api_key}"},
+                headers=headers,
                 json=payload
             )
             response.raise_for_status()
