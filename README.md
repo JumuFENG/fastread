@@ -1,21 +1,22 @@
 # FastRead
 
-基于FastAPI开发的类似Legado的web版阅读应用，支持在线阅读小说、管理书源、同步阅读进度等功能。
+基于FastAPI开发的类似Legado的阅读应用，在「读」之外还能「写」：在线阅读小说、管理多形态书源、AI续写与正文改写。
 
 ## 功能特性
 
-- 📚 **书籍管理**: 支持导入、搜索、删除书籍
-- 📖 **在线阅读**: 优雅的阅读界面，支持多种主题和字体设置
-- 🔍 **书源管理**: 支持自定义书源，从多个网站搜索和导入书籍
-- 🔗 **URL导入**: 支持直接通过书籍URL导入，智能识别书源
-- 📦 **批量导入**: 支持批量URL导入，一次性添加多本书籍
-- ⚡ **实时加载**: 章节内容按需实时获取，导入速度快
-- 🚀 **智能预加载**: 自动预加载相邻章节，提升阅读体验
-- 👤 **用户系统**: 用户注册登录，个人阅读进度同步
-- 📱 **响应式设计**: 支持桌面端和移动端访问
-- 🔍 **快速搜索**: 本地书籍搜索和在线书源搜索
-- 📊 **阅读进度**: 自动保存和恢复阅读位置
-- 🌐 **离线支持**: 支持网络状态检测和缓存内容
+- ✍️ **AI 续写与创作**: 在最新章节末尾一键续写剧情；选中任意段落即可 AI 简化/扩写/重写，支持自定义创作模板（任意 OpenAI 兼容 API 可接入）
+- 🎭 **正文改写与插入**: 就地改写或插入新段落，与在线章节无缝混排
+- 🔄 **敏感词自动替换**: 自定义词汇映射，阅读时自动替换
+- 📝 **摘录管理**: 选句即存、随读随摘，可集中回顾
+- 🧩 **三态书源系统**: 书源可用 Python 模块、JS 代码段（Node 执行，贴近 Legado 风格）或 CSS 选择器 JSON 配置三种方式定义
+- 🧠 **智能书源识别**: 粘贴 URL 自动匹配书源；批量导入带进度显示、可随时取消
+- 📚 **书籍管理**: 导入、搜索、删除，章节全量缓存后可离线精读
+- 📖 **在线阅读**: 七种主题（含夜间模式）、字体/字号/行距自定义、键盘快捷键（←/→ 切章、Esc 收面板）、目录导航
+- ⚡ **实时加载 + 智能预加载**: 章节按需实时获取并缓存，相邻章节自动预加载，翻页无感
+- 📊 **阅读进度**: 自动保存与恢复，阅读历史可回溯
+- 📱 **响应式设计**: 桌面端与移动端自适应，移动端滚动自动隐藏导航
+- 🌐 **离线支持**: Service Worker 缓存页面壳，网络状态实时提示
+- 🖥️ **桌面版与自动更新**: PyQt6 桌面客户端、Windows 安装器、macOS/Linux 启动器，内置版本检查与自动更新
 
 ## 快速开始
 
@@ -25,20 +26,13 @@
 pip install -r requirements.txt
 ```
 
-### 2. 配置环境变量
-
-```bash
-cp .env.example .env
-# 编辑 .env 文件，设置你的配置
-```
-
-### 3. 启动应用
+### 2. 启动应用
 
 ```bash
 python main.py
 ```
 
-应用将在 http://localhost:8000 启动
+应用将在 http://localhost:8777 启动（端口在 `config/config.json` 的 `client.port` 配置）
 
 ## 桌面版与安装
 
@@ -65,26 +59,28 @@ bash scripts/install_boot_service.sh --service   # 额外注册开机自启后�
 
 ## 自动更新
 
-- 更新检查通过 `{update_server}/api/products/4/latest` 查询（product_id=4），
-  更新包从 `{update_server}/downloads/fastread/fastread-{version}.zip` 下载并覆盖程序文件。
-- 更新服务器与更新模式可在 `config/config.json` 的 `client` 段配置：
-  - `update_server`：默认 `https://prod.ailyf.cn`
-  - `upgrade`：`auto`（启动后自动更新，默认）/ `manual`（界面顶部显示更新横幅，点击「立即更新」手动更新）
-- 相关接口：`GET /api/update/check`、`POST /api/update/apply`。
+- 更新模式可在设置页配置：
+  - `upgrade`：`auto`（启动后自动更新，默认）/ `manual`（界面顶部显示更新横幅）/ `off`（不检查更新）；
 
 ## 项目结构
 
 ```
 ├── main.py                 # 应用入口
+├── desktop.py              # 桌面版（PyQt6 + WebView）
 ├── app/                    # 应用核心代码
 │   ├── database.py         # 数据库模型和配置
+│   ├── lofig.py            # 配置与日志（VERSION 在此）
 │   ├── routers/            # API路由
 │   │   ├── books.py        # 书籍管理
 │   │   ├── reading.py      # 阅读进度
-│   │   └── sources.py      # 书源管理
+│   │   ├── sources.py      # 书源管理
+│   │   └── updates.py      # 自动更新
 │   └── parsers/            # 书源解析器
-├── data/                   # 本地数据（含 reader.db）
-├── tools/                  # 工具脚本（如 migrate_db.py）
+├── config/                 # 运行时配置（config.json，git忽略）
+├── data/                   # 本地数据（含 reader.db，git忽略）
+├── sources/                # 书源定义（git忽略）
+├── scripts/                # 安装器/启动器/Windows服务
+├── tools/                  # 工具脚本（如 migrate_db.py、make_icons.py）
 ├── templates/              # HTML模板
 │   ├── base.html           # 基础模板
 │   ├── index.html          # 首页
@@ -97,7 +93,7 @@ bash scripts/install_boot_service.sh --service   # 额外注册开机自启后�
 
 ## API文档
 
-启动应用后访问 http://localhost:8000/docs 查看自动生成的API文档。
+启动应用后访问 http://localhost:8777/docs 查看自动生成的API文档。
 
 ## 主要功能
 
@@ -119,11 +115,6 @@ bash scripts/install_boot_service.sh --service   # 额外注册开机自启后�
 - 多书源搜索
 - 后台异步导入书籍内容
 
-### 用户系统
-- JWT认证
-- 个人阅读历史
-- 跨设备同步阅读进度
-
 ## 书源管理
 
 ### 添加书源的几种方式
@@ -134,13 +125,7 @@ bash scripts/install_boot_service.sh --service   # 额外注册开机自启后�
 3. 填写书源配置信息并测试
 4. 保存书源
 
-#### 2. 使用初始化脚本
-```bash
-# 快速添加示例书源
-python init_sources.py
-```
-
-#### 3. 从JSON导入
+#### 2. 从JSON导入
 在书源管理界面，可以导入JSON格式的书源配置：
 ```json
 {
@@ -170,7 +155,7 @@ python init_sources.py
 
 ### 自定义书源解析
 
-如需支持特殊的网站结构，可以修改 `routers/sources.py` 中的解析逻辑：
+如需支持特殊的网站结构，可以参考 `app/parsers/` 中的书源解析器实现：
 
 ```python
 # 在 import_book_task 函数中自定义解析规则
@@ -183,6 +168,7 @@ def parse_book_info(soup, source):
         # 默认解析逻辑
         title = soup.find('h1').text
     return title, author, description
+```
 
 ### 自定义主题
 
@@ -234,8 +220,9 @@ MIT License
 - ✅ 批量导入进度显示
 - ✅ 剪贴板快速粘贴
 - ✅ 导入结果实时反馈
-- ✅ 支持取消批量导入## 实
-时加载功能
+- ✅ 支持取消批量导入
+
+## 实时加载功能
 
 ### 工作原理
 - **快速导入**: 导入书籍时只获取基本信息和章节列表，不下载内容

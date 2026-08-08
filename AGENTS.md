@@ -4,10 +4,10 @@ Legado-like Chinese web novel reader. FastAPI + SQLAlchemy 2 + Jinja2 + vanilla 
 
 ## Run
 
-- Start: `python main.py` — serves at `http://localhost:8777` (port is hardcoded in `main.py`, README's `:8000` is stale).
+- Start: `python main.py` — serves at `http://localhost:8777` (port from `config/config.json` → `client.port`, default 8777).
 - `.venv/read` is a working venv (Python 3.12, deps from `requirements.txt`). Run with `.venv/read/bin/python main.py`. Homebrew `python3` (3.14) lacks the project deps.
-- `.env` is not read by the app anymore (previously `routers/auth.py` via `load_dotenv()`). `database.py` resolves the SQLite path itself: DB lives at `data/reader.db` (`app/database.py` computes it from `__file__`).
-- Create extra book sources: `python init_sources.py` (referenced in README but not present — sources are added via UI or `sources/` files).
+- No `.env` / `.env.example` — all config lives in `config/config.json` (`client`/`ai`/`database` sections via `Config` in `app/lofig.py`). `database.py` resolves the SQLite path itself: DB lives at `data/reader.db` (`app/database.py` computes it from `__file__`).
+- Create extra book sources: sources are added via UI or `sources/` files.
 - Docs: `http://localhost:8777/docs`.
 
 ## Single-user mode
