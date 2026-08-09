@@ -24,28 +24,6 @@
 
 <div class="reader-container">
     <div class="row">
-        <!-- 章节列表侧边栏 -->
-        <div class="col-md-3 d-none">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0">章节目录</h6>
-                </div>
-                <div class="card-body p-0">
-                    <div id="chapterList" class="chapter-list">
-                        <!-- 章节列表将通过JavaScript加载 -->
-                    </div>
-                    <div class="text-center p-2" id="chapterListControls" style="display: none;">
-                        <button class="btn btn-outline-secondary btn-sm me-2" onclick="showMoreChapters('prev')">
-                            <i class="bi bi-chevron-up"></i> 更多
-                        </button>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="showMoreChapters('next')">
-                            <i class="bi bi-chevron-down"></i> 更多
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- 阅读区域 -->
         <div id="mainContent" class="col-md-12">
             <div class="reader-header mb-3">
@@ -241,17 +219,17 @@
     </div>
 </div>
 
-<!-- 移动端章节列表模态框 -->
+<!-- 章节目录模态框 -->
 <div class="modal fade" id="chapterModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">章节目录</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-0">
-                <div id="mobileChapterList" class="chapter-list">
-                    <!-- 移动端章节列表 -->
+                <div id="chapterModalList" class="chapter-list">
+                    <!-- 章节列表 -->
                 </div>
             </div>
         </div>
@@ -274,8 +252,6 @@
     let currentChapterIndex = 0;
     let readingProgress = null;
     let lastSavedProgress = null; // 跟踪上次保存的进度
-    let chapterDisplayRange = { start: 0, end: 20 }; // 默认显示前20章
-    const CHAPTER_DISPLAY_COUNT = 20; // 每次显示的章节数量
     let sensitiveWords = {};
     let autoScrollEnabled = false;
     let autoScrollSpeed = 30;
@@ -338,52 +314,14 @@
     }
 
     function updateChapterList() {
-        // 如果章节数量较多，只显示当前章节附近的章节
-        if (chapters.length > CHAPTER_DISPLAY_COUNT) {
-            const halfRange = Math.floor(CHAPTER_DISPLAY_COUNT / 2);
-            chapterDisplayRange.start = Math.max(0, currentChapterIndex - halfRange);
-            chapterDisplayRange.end = Math.min(chapters.length, chapterDisplayRange.start + CHAPTER_DISPLAY_COUNT);
-
-            // 如果接近末尾，调整起始位置
-            if (chapterDisplayRange.end === chapters.length) {
-                chapterDisplayRange.start = Math.max(0, chapters.length - CHAPTER_DISPLAY_COUNT);
-            }
-
-            document.getElementById('chapterListControls').style.display = 'block';
-        } else {
-            chapterDisplayRange.start = 0;
-            chapterDisplayRange.end = chapters.length;
-            document.getElementById('chapterListControls').style.display = 'none';
-        }
-
-        const visibleChapters = chapters.slice(chapterDisplayRange.start, chapterDisplayRange.end);
-
-        const chapterListHtml = visibleChapters.map((chapter, index) => {
-            const actualIndex = chapterDisplayRange.start + index;
-            return `
-            <div class="chapter-item ${actualIndex === currentChapterIndex ? 'active' : ''}" 
-                 onclick="loadChapter(${actualIndex})">
-                <span class="chapter-number">${chapter.chapter_number}</span>
-                <span class="chapter-title">${chapter.title}</span>
-            </div>
-        `;
-        }).join('');
-
-        // 添加范围提示
-        const rangeInfo = chapters.length > CHAPTER_DISPLAY_COUNT ?
-            `<div class="text-muted small p-2 text-center">显示 ${chapterDisplayRange.start + 1}-${chapterDisplayRange.end} / ${chapters.length} 章</div>` : '';
-
-        document.getElementById('chapterList').innerHTML = rangeInfo + chapterListHtml;
-
-        // 移动端显示全部章节
-        const mobileChapterListHtml = chapters.map((chapter, index) => `
+        const chapterListHtml = chapters.map((chapter, index) => `
             <div class="chapter-item ${index === currentChapterIndex ? 'active' : ''}" 
                  onclick="loadChapter(${index}); bootstrap.Modal.getInstance(document.getElementById('chapterModal')).hide();">
                 <span class="chapter-number">${chapter.chapter_number}</span>
                 <span class="chapter-title">${chapter.title}</span>
             </div>
         `).join('');
-        document.getElementById('mobileChapterList').innerHTML = mobileChapterListHtml;
+        document.getElementById('chapterModalList').innerHTML = chapterListHtml;
     }
 
     async function loadChapter(chapterIndex) {
@@ -671,29 +609,7 @@
     }
 
     function toggleChapterList() {
-        if (window.innerWidth < 768) {
-            new bootstrap.Modal(document.getElementById('chapterModal')).show();
-        } else {
-            const sidebar = document.querySelector('.col-md-3');
-            // 使用ID选择器，更稳定可靠
-            const mainContent = document.getElementById('mainContent');
-
-            if (sidebar.classList.contains('d-none')) {
-                // 显示侧边栏
-                sidebar.classList.remove('d-none');
-                sidebar.classList.add('d-md-block');
-                // 调整正文宽度为9列
-                mainContent.classList.remove('col-md-12');
-                mainContent.classList.add('col-md-9');
-            } else {
-                // 隐藏侧边栏
-                sidebar.classList.add('d-none');
-                sidebar.classList.remove('d-md-block');
-                // 调整正文宽度为12列（全宽）
-                mainContent.classList.remove('col-md-9');
-                mainContent.classList.add('col-md-12');
-            }
-        }
+        new bootstrap.Modal(document.getElementById('chapterModal')).show();
     }
 
     function toggleTemplates() {
@@ -1241,19 +1157,6 @@
             }
             preloadChapter(chapterIndex + 1);
         }
-    }
-
-    // 显示更多章节
-    function showMoreChapters(direction) {
-        if (direction === 'prev' && chapterDisplayRange.start > 0) {
-            chapterDisplayRange.start = Math.max(0, chapterDisplayRange.start - CHAPTER_DISPLAY_COUNT);
-            chapterDisplayRange.end = chapterDisplayRange.start + CHAPTER_DISPLAY_COUNT;
-        } else if (direction === 'next' && chapterDisplayRange.end < chapters.length) {
-            chapterDisplayRange.end = Math.min(chapters.length, chapterDisplayRange.end + CHAPTER_DISPLAY_COUNT);
-            chapterDisplayRange.start = chapterDisplayRange.end - CHAPTER_DISPLAY_COUNT;
-        }
-
-        updateChapterList();
     }
 
     function showProgressOnNavigation() {
