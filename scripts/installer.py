@@ -39,37 +39,58 @@ def default_install_dir():
     return os.path.join(la, "fastread")
 
 
+def shortcut_install_dir():
+    ps = (
+        "$ws = New-Object -ComObject WScript.Shell;"
+        "$lnk = $ws.CreateShortcut([Environment]::GetFolderPath('Desktop') + '\\" + SHORTCUT_NAME + "');"
+        "Write-Output $lnk.WorkingDirectory"
+    )
+    r = subprocess.run(
+        ["powershell", "-NoProfile", "-Command", ps],
+        capture_output=True, text=True,
+        creationflags=subprocess.CREATE_NO_WINDOW,
+    )
+    if r.returncode != 0:
+        return None
+    d = (r.stdout or "").strip()
+    if d and os.path.isdir(os.path.join(d, "scripts")):
+        return d
+    return None
+
+
 def detect_installed():
     r = subprocess.run(
         ["sc", "qc", SERVICE_NAME],
         capture_output=True, text=True,
         creationflags=subprocess.CREATE_NO_WINDOW,
     )
-    if r.returncode != 0:
-        return None
+    if r.returncode == 0:
+        svc_exe = None
+        for line in (r.stdout or "").splitlines():
+            if not line.strip().startswith("BINARY_PATH_NAME"):
+                continue
+            quoted = re.findall(r'"([^"]*pythonservice\.exe)"', line.partition(":")[2].strip(), re.IGNORECASE)
+            if quoted:
+                svc_exe = quoted[0]
 
-    svc_exe = None
-    for line in (r.stdout or "").splitlines():
-        if not line.strip().startswith("BINARY_PATH_NAME"):
-            continue
-        quoted = re.findall(r'"([^"]*pythonservice\.exe)"', line.partition(":")[2].strip(), re.IGNORECASE)
-        if quoted:
-            svc_exe = quoted[0]
+        if svc_exe:
+            python_exe = os.path.join(os.path.dirname(svc_exe), "python.exe")
+            ps = subprocess.run(
+                ["powershell", "-NoProfile",
+                 "-Command",
+                  'Get-CimInstance Win32_Process -Filter "name=\'python.exe\'" | Select-Object -ExpandProperty CommandLine'],
+                capture_output=True, text=True,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+            )
+            if ps.returncode == 0:
+                for cmdline in (ps.stdout or "").splitlines():
+                    m = re.search(r'-u\s+"?([^"\s]+\\main\.py)', cmdline.strip())
+                    if m and os.path.isfile(m.group(1)):
+                        return os.path.dirname(m.group(1))
 
-    if svc_exe:
-        python_exe = os.path.join(os.path.dirname(svc_exe), "python.exe")
-        ps = subprocess.run(
-            ["powershell", "-NoProfile",
-             "-Command",
-              'Get-CimInstance Win32_Process -Filter "name=\'python.exe\'" | Select-Object -ExpandProperty CommandLine'],
-            capture_output=True, text=True,
-            creationflags=subprocess.CREATE_NO_WINDOW,
-        )
-        if ps.returncode == 0:
-            for cmdline in (ps.stdout or "").splitlines():
-                m = re.search(r'-u\s+"?([^"\s]+\\main\.py)', cmdline.strip())
-                if m and os.path.isfile(m.group(1)):
-                    return os.path.dirname(m.group(1))
+    shortcut = shortcut_install_dir()
+    if shortcut:
+        return shortcut
 
     default = default_install_dir()
     if os.path.isdir(os.path.join(default, "scripts")):
