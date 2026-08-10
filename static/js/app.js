@@ -389,30 +389,48 @@ function showSourceJsonExample() {
 
 
 async function updateBookSource(sourceData) {
-    try {
-        const response = await fetch('/api/sources/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({name:sourceData.name, sourcejson: sourceData})
-        });
+    const list = Array.isArray(sourceData) ? sourceData : [sourceData];
+    let success = 0, failed = 0;
 
-        if (response.ok) {
-            showAlert('书源添加成功', 'success');
-            loadSourceList();
-        } else {
-            const error = await response.json();
-            showAlert(error.detail || '添加失败', 'danger');
+    for (const item of list) {
+        if (!item || !item.name || !item.url) {
+            failed++;
+            console.error('书源配置缺少必要字段(name/url):', item);
+            continue;
         }
-    } catch (error) {
-        console.error('保存书源失败:', error);
-        showAlert('保存失败，请检查网络连接', 'danger');
+        try {
+            const response = await fetch('/api/sources/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({name: item.name, sourcejson: item})
+            });
+
+            if (response.ok) {
+                success++;
+            } else {
+                failed++;
+                const error = await response.json().catch(() => ({}));
+                console.error('书源保存失败:', error.detail || error);
+            }
+        } catch (error) {
+            failed++;
+            console.error('保存书源失败:', error);
+        }
     }
+
+    loadSourceList();
+    if (list.length === 1) {
+        showAlert(success === 1 ? '书源保存成功' : '书源保存失败', success === 1 ? 'success' : 'danger');
+    } else {
+        showAlert(`导入完成：成功 ${success} 个，失败 ${failed} 个`, failed > 0 ? 'warning' : 'success');
+    }
+    return { success, failed };
 }
 
 // 从JSON导入书源
-function importFromJson() {
+async function importFromJson() {
     const jsonText = document.getElementById('importJson').value.trim();
     if (!jsonText) {
         showAlert('请输入JSON配置', 'warning');
@@ -422,18 +440,13 @@ function importFromJson() {
     try {
         const sourceData = JSON.parse(jsonText);
 
-        // 验证JSON格式
-        if (!sourceData.name) {
-            showAlert('JSON格式不正确，缺少必要字段', 'danger');
-            return;
-        }
-
-        updateBookSource(sourceData);
-        document.getElementById('importJson').value = '';
-        // 修改保存按钮为更新
-        const saveBtn = document.querySelector('#presetSources button[onclick="importFromJson()"]');
-        if (saveBtn) {
-            saveBtn.textContent = '保存';
+        const { success, failed } = await updateBookSource(sourceData);
+        if (success > 0 && failed === 0) {
+            document.getElementById('importJson').value = '';
+            const saveBtn = document.querySelector('#presetSources button[onclick="importFromJson()"]');
+            if (saveBtn) {
+                saveBtn.textContent = '保存';
+            }
         }
     } catch (error) {
         showAlert('JSON格式错误: ' + error.message, 'danger');
@@ -453,26 +466,9 @@ function importFromFile() {
     const reader = new FileReader();
     reader.onload = function(e) {
         try {
-            const content = e.target.result;
-            let sourceData;
-
-            if (file.name.endsWith('.json')) {
-                sourceData = JSON.parse(content);
-            } else {
-                // 尝试解析文本文件
-                sourceData = JSON.parse(content);
-            }
-
-            // 如果是书源数组，导入第一个
-            if (Array.isArray(sourceData)) {
-                sourceData = sourceData[0];
-                for (let i = 1; i < sourceData.length; i++) {
-                    updateBookSource(sourceData[i]);
-                }
-            } else {
-                updateBookSource(sourceData);
-            }
-
+            const sourceData = JSON.parse(e.target.result);
+            updateBookSource(sourceData);
+            fileInput.value = '';
         } catch (error) {
             showAlert('文件格式错误: ' + error.message, 'danger');
         }
