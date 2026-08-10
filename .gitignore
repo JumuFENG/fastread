@@ -219,3 +219,4 @@ sources/*
 !sources/.gitkeep
 draft/
 mempalace.yaml
+entities.json 

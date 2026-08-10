@@ -7,8 +7,13 @@
     <div class="col-md-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2>我的书架</h2>
-            <div class="input-group" style="width: 300px;">
-                <input type="text" class="form-control" id="localSearch" placeholder="搜索本地书籍">
+            <div class="input-group" style="width: 340px;">
+                <div class="dropdown">
+                    <input type="text" class="form-control" id="localSearch"
+                        placeholder="搜索本地书籍/显示指定书源" data-bs-toggle="dropdown" aria-expanded="false">
+                    <ul class="dropdown-menu w-100" id="sourceFilterMenu">
+                    </ul>
+                </div>
                 <button class="btn btn-outline-secondary" onclick="searchLocalBooks()">
                     <i class="bi bi-search"></i>
                 </button>
@@ -28,7 +33,7 @@
         <div id="emptyShelf" class="text-center mt-5 d-none">
             <i class="bi bi-book display-1 text-muted"></i>
             <h4 class="text-muted mt-3">书架空空如也</h4>
-            <p class="text-muted">点击上方搜索按钮添加书籍到书架</p>
+            <p class="text-muted"><a class="nav-link" href="#" onclick="showSearchModal()">添加书籍到书架</a></p>
         </div>
     </div>
 </div>
@@ -38,14 +43,62 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         loadBooks();
-        loadBookSources();
-        // 为搜索框添加回车响应
+        loadBookSources().then(populateSourceFilter);
+        // 为搜索框添加回车响应，回车即取消书源过滤
         document.getElementById('localSearch').addEventListener('keydown', function (e) {
             if (e.key === 'Enter') {
+                bootstrap.Dropdown.getOrCreateInstance(this).hide();
                 searchLocalBooks();
             }
         });
+        // 下拉框每次打开时重置为完整书源列表
+        document.getElementById('localSearch').addEventListener('show.bs.dropdown', resetSourceFilterItems);
+        document.getElementById('localSearch').addEventListener('input', function () {
+            const kw = this.value.trim();
+            document.querySelectorAll('#sourceFilterMenu .dropdown-item').forEach(item => {
+                item.closest('li').style.display = (!kw || item.textContent.includes(kw)) ? '' : 'none';
+            });
+        });
     });
+
+    let currentSourceFilter = '';
+
+    function resetSourceFilterItems() {
+        document.querySelectorAll('#sourceFilterMenu .dropdown-item').forEach(item => {
+            item.closest('li').style.display = '';
+        });
+    }
+
+    function populateSourceFilter() {
+        const menu = document.getElementById('sourceFilterMenu');
+        menu.innerHTML = bookSources.map(source =>
+            `<li><a class="dropdown-item" href="#" data-source="${source.id}">${source.name}</a></li>`
+        ).join('');
+    }
+
+    document.getElementById('sourceFilterMenu').addEventListener('click', function (e) {
+        const item = e.target.closest('.dropdown-item');
+        if (!item) return;
+        e.preventDefault();
+        const input = document.getElementById('localSearch');
+        currentSourceFilter = item.dataset.source;
+        input.placeholder = `「${item.textContent.trim()}」`;
+        input.value = '';
+        renderBooks(new URLSearchParams({ source_id: currentSourceFilter }));
+        bootstrap.Dropdown.getOrCreateInstance(input).hide();
+    });
+
+    function renderBooks(params) {
+        fetch(`/api/books/?${params.toString()}`)
+            .then(response => response.json())
+            .then(books => {
+                document.getElementById('bookshelf').innerHTML = createBooksHtml(books);
+            })
+            .catch(error => {
+                console.error('加载书籍失败:', error);
+                showAlert('加载书籍失败', 'danger');
+            });
+    }
 
     window.addEventListener('scroll', function () {
         if (window.innerHeight + window.scrollY >= document.body.offsetHeight) {
@@ -172,42 +225,12 @@
     }
 
     function searchLocalBooks() {
-        const keyword = document.getElementById('localSearch').value.trim();
-        if (!keyword) {
-            loadBooks();
-            return;
-        }
+        const input = document.getElementById('localSearch');
+        const keyword = input.value.trim();
+        currentSourceFilter = '';
+        input.placeholder = '搜索本地书籍/显示指定书源';
 
-        fetch(`/api/books/?search=${encodeURIComponent(keyword)}`)
-            .then(response => response.json())
-            .then(books => {
-                const bookshelf = document.getElementById('bookshelf');
-                bookshelf.innerHTML = books.map(book => `
-                <div class="col-md-3 col-sm-6 mb-4">
-                    <div class="card book-card h-100">
-                        <img src="${book.cover_url || '/static/images/default-cover.jpg'}" 
-                             class="card-img-top book-cover" alt="${book.title}">
-                        <div class="card-body d-flex flex-column">
-                            <h6 class="card-title">${book.title}</h6>
-                            <p class="card-text text-muted small">${book.author}</p>
-                            <p class="card-text small flex-grow-1">${book.description.substring(0, 100)}...</p>
-                            <div class="mt-auto">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <small class="text-muted">${book.total_chapters}章</small>
-                                    <button class="btn btn-primary btn-sm" onclick="readBook(${book.id})">
-                                        <i class="bi bi-book-open"></i> 阅读
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-            })
-            .catch(error => {
-                console.error('搜索失败:', error);
-                showAlert('搜索失败', 'danger');
-            });
+        renderBooks(new URLSearchParams({ search: keyword }));
     }
 </script>
 {% endblock %}

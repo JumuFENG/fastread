@@ -62,11 +62,14 @@ async def get_books(
     skip: int = 0,
     limit: int = 20,
     search: Optional[str] = None,
+    source_id: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     query = db.query(Book)
     if search:
         query = query.filter(Book.title.contains(search))
+    if source_id:
+        query = query.filter(Book.source_id == source_id)
     books = query.offset(skip).limit(limit).all()
     return books
 
