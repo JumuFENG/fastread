@@ -19,6 +19,7 @@ class BookResponse(BaseModel):
     description: str
     cover_url: Optional[str]
     total_chapters: int
+    tags: str = ''
     is_completed: bool
     created_at: datetime
 
@@ -63,6 +64,7 @@ async def get_books(
     limit: int = 20,
     search: Optional[str] = None,
     source_id: Optional[str] = None,
+    tag: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     query = db.query(Book)
@@ -70,8 +72,35 @@ async def get_books(
         query = query.filter(Book.title.contains(search))
     if source_id:
         query = query.filter(Book.source_id == source_id)
+    if tag:
+        # 逗号分隔标签的精确匹配：两侧补逗号后查找 ",tag,"
+        query = query.filter(func.instr(',' + Book.tags + ',', ',' + tag + ',') > 0)
     books = query.offset(skip).limit(limit).all()
     return books
+
+@router.get("/tags")
+async def get_all_tags(db: Session = Depends(get_db)):
+    """聚合所有书籍的标签，去重排序"""
+    tags = set()
+    for (t,) in db.query(Book.tags).all():
+        if t:
+            tags.update(x.strip() for x in t.split(',') if x.strip())
+    return {"tags": sorted(tags)}
+
+class BookTagsUpdate(BaseModel):
+    tags: str = ''
+
+@router.put("/{book_id}/tags")
+async def update_book_tags(book_id: int, body: BookTagsUpdate, db: Session = Depends(get_db)):
+    """设置书籍标签（逗号分隔），自动去重规范化"""
+    book = db.query(Book).filter(Book.id == book_id).first()
+    if not book:
+        raise HTTPException(status_code=404, detail="书籍不存在")
+    book.tags = ','.join(dict.fromkeys(
+        x.strip() for x in body.tags.replace('，', ',').split(',') if x.strip()
+    ))
+    db.commit()
+    return {"message": "标签保存成功", "tags": book.tags}
 
 @router.get("/{book_id}", response_model=BookResponse)
 async def get_book(book_id: int, db: Session = Depends(get_db)):

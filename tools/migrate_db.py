@@ -24,6 +24,13 @@ def migrate_database():
     cursor = conn.cursor()
     
     try:
+        # 检查books表是否存在tags字段
+        cursor.execute("PRAGMA table_info(books)")
+        book_columns = [column[1] for column in cursor.fetchall()]
+        if 'tags' not in book_columns:
+            print("添加tags字段...")
+            cursor.execute("ALTER TABLE books ADD COLUMN tags VARCHAR DEFAULT ''")
+
         # 检查chapters表是否存在新字段
         cursor.execute("PRAGMA table_info(chapters)")
         columns = [column[1] for column in cursor.fetchall()]

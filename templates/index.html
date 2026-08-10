@@ -5,8 +5,11 @@
 {% block content %}
 <div class="row">
     <div class="col-md-12">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>我的书架</h2>
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <h2 class="mb-0">我的书架</h2>
+                <div class="tag-filter-row" id="tagFilterRow"></div>
+            </div>
             <div class="input-group" style="width: 340px;">
                 <div class="dropdown">
                     <input type="text" class="form-control" id="localSearch"
@@ -37,6 +40,25 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="tagModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">设置书籍标签</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">多个标签用逗号分隔，如：玄幻,完本</p>
+                <input type="text" class="form-control" id="tagInput" placeholder="玄幻,爽文,完本">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveBookTags()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -44,6 +66,7 @@
     document.addEventListener('DOMContentLoaded', function () {
         loadBooks();
         loadBookSources().then(populateSourceFilter);
+        loadTagFilter();
         // 为搜索框添加回车响应，回车即取消书源过滤
         document.getElementById('localSearch').addEventListener('keydown', function (e) {
             if (e.key === 'Enter') {
@@ -62,6 +85,17 @@
     });
 
     let currentSourceFilter = '';
+    let currentKeyword = '';
+    let currentTag = '';
+    let tagValues = [];
+
+    function refreshBooks() {
+        const params = new URLSearchParams();
+        if (currentSourceFilter) params.set('source_id', currentSourceFilter);
+        if (currentKeyword) params.set('search', currentKeyword);
+        if (currentTag) params.set('tag', currentTag);
+        renderBooks(params);
+    }
 
     function resetSourceFilterItems() {
         document.querySelectorAll('#sourceFilterMenu .dropdown-item').forEach(item => {
@@ -82,17 +116,41 @@
         e.preventDefault();
         const input = document.getElementById('localSearch');
         currentSourceFilter = item.dataset.source;
-        input.placeholder = `「${item.textContent.trim()}」`;
+        currentKeyword = '';
         input.value = '';
-        renderBooks(new URLSearchParams({ source_id: currentSourceFilter }));
+        input.placeholder = `「${item.textContent.trim()}」`;
         bootstrap.Dropdown.getOrCreateInstance(input).hide();
+        refreshBooks();
+    });
+
+    async function loadTagFilter() {
+        try {
+            const response = await fetch('/api/books/tags');
+            const { tags = [] } = await response.json();
+            tagValues = ['', ...tags];
+            document.getElementById('tagFilterRow').innerHTML = tagValues.map((v, i) =>
+                `<button class="tag-filter-item${v === currentTag ? ' active' : ''}" data-idx="${i}">${v || '全部'}</button>`
+            ).join('');
+        } catch (error) {
+            console.error('加载标签失败:', error);
+        }
+    }
+
+    document.getElementById('tagFilterRow').addEventListener('click', function (e) {
+        const btn = e.target.closest('.tag-filter-item');
+        if (!btn) return;
+        currentTag = tagValues[Number(btn.dataset.idx)];
+        this.querySelectorAll('.tag-filter-item').forEach(b => b.classList.toggle('active', b === btn));
+        refreshBooks();
     });
 
     function renderBooks(params) {
+        booksLoadedFinished = false;
         fetch(`/api/books/?${params.toString()}`)
             .then(response => response.json())
             .then(books => {
                 document.getElementById('bookshelf').innerHTML = createBooksHtml(books);
+                document.getElementById('emptyShelf').classList.toggle('d-none', books.length > 0);
             })
             .catch(error => {
                 console.error('加载书籍失败:', error);
@@ -142,7 +200,11 @@
 
         try {
             const bookshelf = document.getElementById('bookshelf');
-            const response = await fetch(`/api/books/?skip=${bookshelf.childElementCount}`);
+            const params = new URLSearchParams({ skip: bookshelf.childElementCount });
+            if (currentSourceFilter) params.set('source_id', currentSourceFilter);
+            if (currentKeyword) params.set('search', currentKeyword);
+            if (currentTag) params.set('tag', currentTag);
+            const response = await fetch(`/api/books/?${params.toString()}`);
             const books = await response.json();
             if (books.length > 0) {
                 bookshelf.innerHTML += createBooksHtml(books);
@@ -165,6 +227,7 @@
                         <h6 class="card-title">${book.title}</h6>
                         <p class="card-text text-muted small">${book.author}</p>
                         <p class="card-text small flex-grow-1">${book.description.substring(0, 100)}...</p>
+                        <div class="mb-2">${(book.tags || '').split(',').filter(Boolean).map(t => `<span class="badge tag-badge me-1">${t.trim()}</span>`).join('')}<a href="#" class="badge tag-badge tag-badge-link me-1" title="添加/修改标签" onclick="editBookTags(${book.id});return false;"><i class="bi bi-tags"></i></a></div>
                         <div class="mt-auto">
                             <div class="d-flex justify-content-between align-items-center">
                                 <button class="btn btn-inline-secondary btn-sm" title="更新章节" onclick="updateBookChapters(${book.id})">
@@ -226,11 +289,49 @@
 
     function searchLocalBooks() {
         const input = document.getElementById('localSearch');
-        const keyword = input.value.trim();
+        currentKeyword = input.value.trim();
         currentSourceFilter = '';
         input.placeholder = '搜索本地书籍/显示指定书源';
 
-        renderBooks(new URLSearchParams({ search: keyword }));
+        refreshBooks();
+    }
+
+    let tagEditingBookId = null;
+
+    async function editBookTags(bookId) {
+        tagEditingBookId = bookId;
+        const input = document.getElementById('tagInput');
+        input.value = '';
+        new bootstrap.Modal(document.getElementById('tagModal')).show();
+        try {
+            const response = await fetch(`/api/books/${bookId}`);
+            const book = await response.json();
+            input.value = book.tags || '';
+        } catch (error) {
+            console.error('获取书籍标签失败:', error);
+        }
+    }
+
+    async function saveBookTags() {
+        const tags = document.getElementById('tagInput').value.trim();
+        try {
+            const response = await fetch(`/api/books/${tagEditingBookId}/tags`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tags })
+            });
+            if (response.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('tagModal')).hide();
+                showAlert('标签保存成功', 'success');
+                loadTagFilter();
+                refreshBooks();
+            } else {
+                showAlert('标签保存失败', 'danger');
+            }
+        } catch (error) {
+            console.error('标签保存失败:', error);
+            showAlert('标签保存失败', 'danger');
+        }
     }
 </script>
 {% endblock %}

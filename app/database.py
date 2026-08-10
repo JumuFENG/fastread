@@ -28,6 +28,7 @@ class Book(Base):
     source_id = Column(String)
     source_url = Column(String)
     total_chapters = Column(Integer, default=0)
+    tags = Column(String, default='')  # 逗号分隔的标签
     is_completed = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow)
