@@ -39,6 +39,29 @@ def default_install_dir():
     return os.path.join(la, "fastread")
 
 
+def installed_version(install_dir):
+    lofig = os.path.join(install_dir, "app", "lofig.py")
+    try:
+        with open(lofig, encoding="utf-8") as f:
+            m = re.search(r'VERSION\s*=\s*["\']([^"\']+)["\']', f.read())
+            return m.group(1) if m else None
+    except Exception:
+        return None
+
+
+def _ver_key(v):
+    return tuple(int(x) for x in re.findall(r"\d+", str(v or "")))
+
+
+def service_installed():
+    r = subprocess.run(
+        ["sc", "qc", SERVICE_NAME],
+        capture_output=True, text=True,
+        creationflags=subprocess.CREATE_NO_WINDOW,
+    )
+    return r.returncode == 0
+
+
 def shortcut_install_dir():
     ps = (
         "$ws = New-Object -ComObject WScript.Shell;"
@@ -124,6 +147,11 @@ class InstallWorker(QThread, _RunMixin):
             self.log_signal.emit("检查 Python...")
             self.python_path = self._ensure_python()
 
+            if self.with_service:
+                self.progress_signal.emit(10)
+                self.log_signal.emit("停止旧服务...")
+                self._run(["net", "stop", SERVICE_NAME])
+
             self.progress_signal.emit(20)
             self.log_signal.emit("部署程序文件...")
             self._deploy_files()
@@ -131,6 +159,10 @@ class InstallWorker(QThread, _RunMixin):
             self.progress_signal.emit(40)
             self.log_signal.emit("安装 Python 依赖...")
             self._install_deps(self.python_path)
+
+            self.progress_signal.emit(50)
+            self.log_signal.emit("迁移数据库结构...")
+            self._migrate_db(self.python_path)
 
             if self.with_service:
                 self.progress_signal.emit(60)
@@ -192,6 +224,12 @@ class InstallWorker(QThread, _RunMixin):
         if os.path.isfile(req_src):
             shutil.copy2(req_src, os.path.join(dst, "requirements.txt"))
 
+        tools_dst = os.path.join(dst, "tools")
+        os.makedirs(tools_dst, exist_ok=True)
+        tool_src = os.path.join(src, "tools", "migrate_db.py")
+        if os.path.isfile(tool_src):
+            shutil.copy2(tool_src, os.path.join(tools_dst, "migrate_db.py"))
+
         for d in ("config", "logs", "data", "sources"):
             os.makedirs(os.path.join(dst, d), exist_ok=True)
         self.log_signal.emit(f"  已部署到 {dst}")
@@ -211,8 +249,17 @@ class InstallWorker(QThread, _RunMixin):
                   check=True)
         self.log_signal.emit("  PyQt6 / PyQt6-WebEngine ✓（桌面界面）")
 
+    def _migrate_db(self, python_path):
+        migrate = os.path.join(self.install_dir, "tools", "migrate_db.py")
+        r = self._run([python_path, migrate, "migrate"])
+        if r.returncode != 0:
+            raise RuntimeError(f"数据库迁移失败:\n{(r.stdout or '') + (r.stderr or '')}")
+        self.log_signal.emit("  数据库结构 ✓")
+
     def _install_service(self, python_path):
         svc = os.path.join(self.install_dir, "scripts", "win_service.py")
+        self._run(["net", "stop", SERVICE_NAME])
+        self._run(["sc", "delete", SERVICE_NAME])
         self._run([python_path, svc, "install"],
                   cwd=self.install_dir, check=True)
         self._run(["sc", "config", SERVICE_NAME, "start=auto"], check=True)
@@ -307,23 +354,49 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.installed_dir = detect_installed()
         self.worker = None
-        self.mode = "uninstall" if self.installed_dir else "install"
+        self._uninstalling = False
+        self.installed_ver = installed_version(self.installed_dir) if self.installed_dir else None
+        if self.installed_dir:
+            if self.installed_ver and _ver_key(app_version()) > _ver_key(self.installed_ver):
+                self.mode = "upgrade"
+            else:
+                self.mode = "repair"
+        else:
+            self.mode = "install"
 
-        self.setWindowTitle(f"FastRead 卸载 v{app_version()}" if self.installed_dir else f"FastRead 安装程序 v{app_version()}")
+        if self.mode == "upgrade":
+            self.setWindowTitle(f"FastRead 升级 v{self.installed_ver} → v{app_version()}")
+        elif self.mode == "repair":
+            self.setWindowTitle(f"FastRead 修复 v{app_version()}")
+        else:
+            self.setWindowTitle(f"FastRead 安装程序 v{app_version()}")
         self.setFixedSize(600, 460)
 
         central = QWidget()
         layout = QVBoxLayout(central)
         layout.setContentsMargins(20, 20, 20, 20)
 
-        title = QLabel("FastRead 卸载" if self.installed_dir else "FastRead 安装")
+        if self.mode == "upgrade":
+            title_text = f"FastRead 升级（v{self.installed_ver} → v{app_version()}）"
+        elif self.mode == "repair":
+            title_text = f"FastRead 修复（v{app_version()}）"
+        else:
+            title_text = "FastRead 安装"
+        title = QLabel(title_text)
         title.setStyleSheet("font-size: 18px; font-weight: bold;")
         layout.addWidget(title)
 
-        if self.installed_dir:
+        if self.mode == "upgrade":
             desc_text = (
-                f"检测到已安装在：\n{self.installed_dir}\n\n"
-                "将停止并删除服务、删除程序文件和桌面快捷方式。"
+                f"检测到已安装 v{self.installed_ver}，将升级到 v{app_version()}。\n"
+                f"安装位置：{self.installed_dir}\n\n"
+                "将重新部署程序文件、安装依赖、迁移数据库，并重建桌面快捷方式。"
+            )
+        elif self.mode == "repair":
+            desc_text = (
+                f"检测到已安装 v{self.installed_ver or '?'}，与当前版本一致。\n"
+                f"安装位置：{self.installed_dir}\n\n"
+                "将重新部署程序文件、安装依赖，并重建桌面快捷方式/服务。"
             )
         else:
             desc_text = (
@@ -335,7 +408,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(desc)
 
         hl = QHBoxLayout()
-        hl.addWidget(QLabel("安装目录:" if not self.installed_dir else "安装位置:"))
+        hl.addWidget(QLabel("安装位置:" if self.installed_dir else "安装目录:"))
         self.path_edit = QLineEdit(self.installed_dir or default_install_dir())
         if self.installed_dir:
             self.path_edit.setReadOnly(True)
@@ -347,7 +420,7 @@ class MainWindow(QMainWindow):
         layout.addLayout(hl)
 
         self.auto_service = QCheckBox("注册开机启动服务")
-        self.auto_service.setChecked(False)
+        self.auto_service.setChecked(self.mode in ("repair", "upgrade") and service_installed())
         layout.addWidget(self.auto_service)
 
         self.progress = QProgressBar()
@@ -358,12 +431,20 @@ class MainWindow(QMainWindow):
         self.log_area.setFont(QFont("Consolas", 9))
         layout.addWidget(self.log_area)
 
-        self.btn = QPushButton("卸载" if self.installed_dir else "安装")
+        self.btn = QPushButton({"upgrade": "升级", "repair": "修复", "uninstall": "卸载"}.get(self.mode, "安装"))
         self.btn.setFixedHeight(36)
-        if self.installed_dir:
+        if self.mode == "uninstall":
             self.btn.setStyleSheet("background-color: #c0392b; color: white;")
         self.btn.clicked.connect(self._start)
         layout.addWidget(self.btn)
+
+        self.uninstall_btn = QPushButton("卸载...")
+        self.uninstall_btn.setFixedHeight(36)
+        self.uninstall_btn.setStyleSheet("background-color: #c0392b; color: white;")
+        self.uninstall_btn.clicked.connect(self._start_uninstall)
+        if self.mode not in ("repair", "upgrade"):
+            self.uninstall_btn.hide()
+        layout.addWidget(self.uninstall_btn)
 
         self.setCentralWidget(central)
 
@@ -387,6 +468,17 @@ class MainWindow(QMainWindow):
             install_dir = os.path.join(install_dir, "fastread")
             self.path_edit.setText(install_dir)
 
+        if self.mode in ("repair", "upgrade"):
+            action = "修复" if self.mode == "repair" else "升级"
+            reply = QMessageBox.question(
+                self, f"确认{action}",
+                f"确定要{action} FastRead 吗？\n\n{install_dir}",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+
+        self._uninstalling = False
         self._begin(InstallWorker(install_dir, self.auto_service.isChecked()))
 
     def _start_uninstall(self):
@@ -397,10 +489,12 @@ class MainWindow(QMainWindow):
         )
         if reply != QMessageBox.StandardButton.Yes:
             return
+        self._uninstalling = True
         self._begin(UninstallWorker(self.installed_dir))
 
     def _begin(self, worker):
         self.btn.setEnabled(False)
+        self.uninstall_btn.setEnabled(False)
         self.btn.setText("处理中...")
         self.log_area.clear()
         self.progress.setValue(0)
@@ -414,7 +508,8 @@ class MainWindow(QMainWindow):
     def _on_finished(self, success, msg):
         self.btn.setEnabled(True)
         if success:
-            if self.mode == "uninstall":
+            self.uninstall_btn.hide()
+            if getattr(self, "_uninstalling", False):
                 self.btn.setText("完成")
                 self.btn.setStyleSheet("")
                 self.btn.clicked.disconnect()
@@ -428,6 +523,7 @@ class MainWindow(QMainWindow):
                     lambda: (subprocess.Popen([pythonw, script], cwd=self.path_edit.text().strip()),
                              QApplication.quit()))
         else:
+            self.uninstall_btn.setEnabled(True)
             self.btn.setText("重试")
             self.btn.clicked.disconnect()
             self.btn.clicked.connect(self._start)

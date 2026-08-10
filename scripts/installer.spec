@@ -63,6 +63,7 @@ a = Analysis(
         (os.path.join(ROOT, 'templates'), 'templates'),
         (os.path.join(ROOT, 'static'), 'static'),
         (os.path.join(ROOT, 'requirements.txt'), '.'),
+        (os.path.join(ROOT, 'tools', 'migrate_db.py'), 'tools'),
         (os.path.join(SPEC_DIR, 'win_service.py'), 'scripts'),
         (os.path.join(ROOT, 'res', 'icon.ico'), 'res'),
         (os.path.join(ROOT, 'res', 'icon.png'), 'res'),

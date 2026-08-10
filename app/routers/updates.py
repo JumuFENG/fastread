@@ -1,5 +1,7 @@
 import os
 import shutil
+import subprocess
+import sys
 import tempfile
 import threading
 import zipfile
@@ -101,6 +103,19 @@ def _overwrite_from(staging, root):
             shutil.copy2(os.path.join(dirpath, fn), dst)
 
 
+def _run_migrate(root):
+    migrate = os.path.join(root, 'tools', 'migrate_db.py')
+    if not os.path.isfile(migrate):
+        return "未找到迁移脚本 tools/migrate_db.py"
+    python_exe = sys.executable
+    if os.path.basename(python_exe).lower() == "pythonservice.exe":
+        python_exe = os.path.join(sys.exec_prefix, "python.exe")
+    r = subprocess.run([python_exe, migrate, "migrate"], capture_output=True, text=True)
+    if r.returncode != 0:
+        return f"数据库迁移失败:\n{(r.stdout or '') + (r.stderr or '')}"
+    return ""
+
+
 @router.post("/update/apply")
 async def apply_update():
     if not _update_lock.acquire(blocking=False):
@@ -153,6 +168,10 @@ async def apply_update():
                 return {"status": "error", "message": f"覆盖更新失败: {e}"}
 
             logger.info("update applied to v%s", latest)
+            migrate_msg = _run_migrate(root)
+            if migrate_msg:
+                logger.warning("migrate after update: %s", migrate_msg)
+                return {"status": "success", "message": f"已更新到 v{latest}, 数据库迁移失败: {migrate_msg}"}
             return {"status": "success", "message": f"已更新到 v{latest}, 请重启程序/服务生效"}
         finally:
             shutil.rmtree(tmp, ignore_errors=True)

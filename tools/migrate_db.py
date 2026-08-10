@@ -171,6 +171,9 @@ def check_book_table():
     db.close()
 
 if __name__ == "__main__":
-    print("检查当前数据库结构...")
-    check_database_schema()
+    if len(sys.argv) > 1 and sys.argv[1] == "migrate":
+        migrate_database()
+    else:
+        print("检查当前数据库结构...")
+        check_database_schema()
     
