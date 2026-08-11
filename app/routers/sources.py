@@ -207,7 +207,7 @@ async def import_book_task(ibook: ImportBookRequest):
         logger.info(f"开始导入书籍: {book_url}")
 
         # 获取对应的解析器
-        parser = get_parser_for_url(book_url)
+        parser = get_parser_for_source(ibook.source_id) or get_parser_for_url(book_url)
 
         # 获取书籍信息
         logger.info(f"正在获取书籍信息...")

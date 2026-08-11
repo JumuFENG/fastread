@@ -220,3 +220,4 @@ sources/*
 draft/
 mempalace.yaml
 entities.json 
+tests/test_parsers.py
