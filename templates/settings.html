@@ -254,17 +254,6 @@
     }
 
     function changeTheme(theme) {
-        const content = document.querySelector('.reader-content');
-        const body = document.body;
-
-        // 移除所有主题类
-        content.className = content.className.replace(/theme-\w+/g, '');
-        body.className = body.className.replace(/theme-\w+/g, '');
-
-        // 添加新主题类
-        content.classList.add('theme-' + theme);
-        body.classList.add('theme-' + theme);
-
         localStorage.setItem('readerTheme', theme);
     }
 

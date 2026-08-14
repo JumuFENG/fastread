@@ -466,7 +466,9 @@
     }
 
     async function saveReadingProgress(force = false) {
-        const p1 = Math.max(0, Array.from(document.querySelector('.chapter-text')?.children ?? []).findIndex(node => node.getBoundingClientRect().bottom > 0));
+        const contentEl = document.querySelector('.chapter-text');
+        if (!currentBook || !contentEl || !currentBook.currentChapterData) return;
+        const p1 = Math.max(0, Array.from(contentEl.children ?? []).findIndex(node => node.getBoundingClientRect().bottom > 0));
         const newProgress = {
             current_chapter: currentChapterIndex + 1,
             reading_position: p1
@@ -745,7 +747,8 @@
                 if (!wordPair.enabled) {
                     return;
                 }
-                const regex = new RegExp(wordPair.original, 'gi');
+                const escaped = wordPair.original.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const regex = new RegExp(escaped, 'gi');
                 filteredContent = filteredContent.replace(regex, wordPair.replacement);
             });
         }

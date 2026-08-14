@@ -1394,7 +1394,7 @@ body.offline::before {
     color: inherit;
     border: 1px solid #dee2e6;
     border-radius: 0.375rem;
-    padding: 0.3rem 0.7rem;
+    padding: 0.1rem 0.3rem;
     font-size: 0.8rem;
     white-space: nowrap;
     cursor: pointer;

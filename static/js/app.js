@@ -1159,6 +1159,9 @@ function cancelBatchImport() {
 // 检查更新
 async function checkForUpdates() {
     try {
+        const response = await fetch('/api/update/config');
+        const cfg = await response.json();
+        if (cfg.upgrade === 'off') return;
         const resp = await fetch('/api/update/check');
         const data = await resp.json();
         if (data.error || !data.has_update || data.upgrade !== 'manual') return;
