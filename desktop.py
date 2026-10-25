@@ -36,7 +36,7 @@ def server_running():
 
 def run_server():
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=PORT, log_config=None, access_log=False)
+    uvicorn.run(app, host="0.0.0.0", port=PORT, log_config=None, access_log=False)
 
 
 class AppPage(QWebEnginePage):
